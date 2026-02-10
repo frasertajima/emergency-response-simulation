@@ -1,0 +1,133 @@
+{
+  "domain": {
+    "nx": 128,
+    "ny": 128,
+    "nz": 128,
+    "dx": 2
+  },
+  "obstacles": [
+    {
+      "type": "box",
+      "position": [
+        128,
+        50,
+        70
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        "XYZ"
+      ],
+      "scale": [
+        4,
+        2.5,
+        1
+      ],
+      "isObstacle": true
+    },
+    {
+      "type": "box",
+      "position": [
+        128,
+        50,
+        186
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        "XYZ"
+      ],
+      "scale": [
+        4,
+        2.5,
+        1
+      ],
+      "isObstacle": true
+    },
+    {
+      "type": "box",
+      "position": [
+        60,
+        35,
+        128
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        "XYZ"
+      ],
+      "scale": [
+        0.8,
+        1.8,
+        2
+      ],
+      "isObstacle": true
+    },
+    {
+      "type": "box",
+      "position": [
+        196,
+        35,
+        128
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        "XYZ"
+      ],
+      "scale": [
+        0.8,
+        1.8,
+        2
+      ],
+      "isObstacle": true
+    },
+    {
+      "type": "leak_source",
+      "position": [
+        40,
+        71,
+        128
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        "XYZ"
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "isObstacle": false
+    }
+  ],
+  "leak": {
+    "position": [
+      40,
+      71,
+      128
+    ],
+    "rate": 6,
+    "growth_time": 25,
+    "decay_start": 80
+  },
+  "wind": {
+    "u": 3.6,
+    "v": -0.5,
+    "w": -0.5
+  },
+  "physics": {
+    "diffusivity": 0.4,
+    "decay": 0.02
+  },
+  "simulation": {
+    "total_time": 150,
+    "frames": 80
+  }
+}

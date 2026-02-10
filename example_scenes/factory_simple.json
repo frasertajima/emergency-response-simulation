@@ -1,0 +1,73 @@
+{
+  "domain": {
+    "nx": 128,
+    "ny": 128,
+    "nz": 128,
+    "dx": 2
+  },
+  "obstacles": [
+    {
+      "type": "box",
+      "position": [
+        128,
+        40,
+        128
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        "XYZ"
+      ],
+      "scale": [
+        2,
+        2,
+        1.5
+      ],
+      "isObstacle": true
+    },
+    {
+      "type": "leak_source",
+      "position": [
+        83.15707571642915,
+        8.817623685485094,
+        112.60340948346516
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        "XYZ"
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "isObstacle": false
+    }
+  ],
+  "leak": {
+    "position": [
+      83,
+      9,
+      113
+    ],
+    "rate": 5,
+    "growth_time": 30,
+    "decay_start": 90
+  },
+  "wind": {
+    "u": 3,
+    "v": 0.2,
+    "w": 0
+  },
+  "physics": {
+    "diffusivity": 0.5,
+    "decay": 0.03
+  },
+  "simulation": {
+    "total_time": 120,
+    "frames": 60
+  }
+}

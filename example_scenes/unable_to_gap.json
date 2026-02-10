@@ -1,0 +1,173 @@
+{
+  "domain": {
+    "nx": 128,
+    "ny": 128,
+    "nz": 128,
+    "dx": 2
+  },
+  "obstacles": [
+    {
+      "type": "box",
+      "position": [
+        128,
+        64,
+        128
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        "XYZ"
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "isObstacle": true
+    },
+    {
+      "type": "box",
+      "position": [
+        148,
+        64,
+        148
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        "XYZ"
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "isObstacle": true
+    },
+    {
+      "type": "box",
+      "position": [
+        168,
+        64,
+        168
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        "XYZ"
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "isObstacle": true
+    },
+    {
+      "type": "box",
+      "position": [
+        181.15358400747627,
+        99.73908438220201,
+        177.9782161516817
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        "XYZ"
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "isObstacle": true
+    },
+    {
+      "type": "panel",
+      "position": [
+        167.9729551307238,
+        105.88242924885705,
+        141.62542445405148
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        "XYZ"
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "isObstacle": true
+    },
+    {
+      "type": "cylinder",
+      "position": [
+        178.8712753381875,
+        77.06547012260228,
+        150.5424529207071
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        "XYZ"
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "isObstacle": true
+    },
+    {
+      "type": "leak_source",
+      "position": [
+        128,
+        82,
+        166
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        "XYZ"
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "isObstacle": false
+    }
+  ],
+  "leak": {
+    "position": [
+      128,
+      82,
+      166
+    ],
+    "rate": 8,
+    "growth_time": 70,
+    "decay_start": 60
+  },
+  "wind": {
+    "u": 2,
+    "v": 0.3,
+    "w": 0
+  },
+  "physics": {
+    "diffusivity": 0.5,
+    "decay": 0.05
+  },
+  "simulation": {
+    "total_time": 120,
+    "frames": 120
+  }
+}

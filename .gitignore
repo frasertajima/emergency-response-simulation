@@ -1,0 +1,31 @@
+# Generated Fortran code
+fortran/custom_scenario_*.cuf
+fortran/scene_*.json
+
+# Compiled executables
+fortran/custom_scenario_*
+!fortran/custom_scenario_*.cuf
+
+# Simulation outputs
+fortran/output_*/
+
+# Build artifacts
+*.o
+*.mod
+
+# Python
+__pycache__/
+*.pyc
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

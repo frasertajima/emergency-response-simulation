@@ -1,0 +1,1515 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>BoundaryPINN 3D Volume Viewer - v44</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                background: #f5f5f5;
+                color: #333;
+                overflow: hidden;
+            }
+
+            #container {
+                display: flex;
+                height: 100vh;
+            }
+
+            #canvas-container {
+                flex: 1;
+                position: relative;
+                background: linear-gradient(135deg, #e0e8f0 0%, #f5f8fa 100%);
+            }
+
+            #viewer {
+                width: 100%;
+                height: 100%;
+                display: block;
+            }
+
+            #controls {
+                width: 350px;
+                background: rgba(255, 255, 255, 0.95);
+                padding: 20px;
+                overflow-y: auto;
+                border-left: 2px solid #2196f3;
+                box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+            }
+
+            h1 {
+                font-size: 1.4em;
+                margin-bottom: 5px;
+                color: #2196f3;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            }
+
+            .subtitle {
+                font-size: 0.85em;
+                color: #666;
+                margin-bottom: 20px;
+                padding-bottom: 15px;
+                border-bottom: 2px solid #e0e0e0;
+            }
+
+            .section {
+                margin-bottom: 25px;
+            }
+
+            .section h2 {
+                font-size: 1em;
+                color: #ff6b00;
+                margin-bottom: 12px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                font-weight: 600;
+            }
+
+            .control-group {
+                margin-bottom: 15px;
+            }
+
+            label {
+                display: block;
+                margin-bottom: 5px;
+                font-size: 0.9em;
+                color: #555;
+                font-weight: 500;
+            }
+
+            input[type="range"] {
+                width: 100%;
+                height: 6px;
+                background: #ddd;
+                border-radius: 3px;
+                outline: none;
+            }
+
+            input[type="range"]::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 18px;
+                height: 18px;
+                background: #2196f3;
+                border-radius: 50%;
+                cursor: pointer;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            }
+
+            input[type="range"]::-moz-range-thumb {
+                width: 18px;
+                height: 18px;
+                background: #2196f3;
+                border-radius: 50%;
+                cursor: pointer;
+                border: none;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            }
+
+            .value-display {
+                display: inline-block;
+                float: right;
+                color: #2196f3;
+                font-weight: bold;
+                font-size: 0.95em;
+            }
+
+            button {
+                width: 100%;
+                padding: 12px;
+                margin: 5px 0;
+                background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+                border: none;
+                border-radius: 5px;
+                color: white;
+                font-size: 0.95em;
+                font-weight: bold;
+                cursor: pointer;
+                transition: all 0.3s;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            }
+
+            button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 10px rgba(33, 150, 243, 0.4);
+            }
+
+            button:disabled {
+                background: #ccc;
+                cursor: not-allowed;
+                transform: none;
+            }
+
+            .play-button {
+                background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+                font-size: 1.1em;
+                padding: 15px;
+            }
+
+            .play-button.playing {
+                background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+            }
+
+            #status {
+                padding: 12px;
+                background: rgba(33, 150, 243, 0.1);
+                border-radius: 5px;
+                font-size: 0.85em;
+                margin-bottom: 15px;
+                border-left: 4px solid #2196f3;
+            }
+
+            .status-connected {
+                background: rgba(76, 175, 80, 0.1);
+                border-left-color: #4caf50;
+            }
+
+            .status-error {
+                background: rgba(244, 67, 54, 0.1);
+                border-left-color: #f44336;
+            }
+
+            #stats {
+                background: rgba(0, 0, 0, 0.05);
+                padding: 12px;
+                border-radius: 5px;
+                font-size: 0.8em;
+                font-family: "Courier New", monospace;
+            }
+
+            .stat-row {
+                display: flex;
+                justify-content: space-between;
+                padding: 5px 0;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            }
+
+            .stat-label {
+                color: #666;
+            }
+
+            .stat-value {
+                color: #2196f3;
+                font-weight: bold;
+            }
+
+            #overlay {
+                position: absolute;
+                top: 20px;
+                left: 20px;
+                background: rgba(255, 255, 255, 0.95);
+                padding: 15px 20px;
+                border-radius: 8px;
+                font-size: 1em;
+                border: 2px solid #ff6b00;
+                z-index: 100;
+                min-width: 250px;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            }
+
+            .overlay-title {
+                font-weight: bold;
+                color: #ff6b00;
+                margin-bottom: 8px;
+                font-size: 1.2em;
+            }
+
+            .overlay-info {
+                font-size: 0.9em;
+                color: #333;
+                line-height: 1.8;
+            }
+
+            #loading {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                text-align: center;
+                font-size: 1.5em;
+                color: #2196f3;
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+
+            .spinner {
+                border: 5px solid rgba(33, 150, 243, 0.2);
+                border-top: 5px solid #2196f3;
+                border-radius: 50%;
+                width: 60px;
+                height: 60px;
+                animation: spin 1s linear infinite;
+                margin: 20px auto;
+            }
+
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+
+            .help-text {
+                font-size: 0.75em;
+                color: #888;
+                line-height: 1.6;
+                background: rgba(0, 0, 0, 0.03);
+                padding: 10px;
+                border-radius: 5px;
+                margin-top: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="container">
+            <div id="canvas-container">
+                <canvas id="viewer"></canvas>
+
+                <div id="overlay">
+                    <div class="overlay-title">🚨 Chemical Leak - 3D LIVE</div>
+                    <div class="overlay-info">
+                        <div>Time: <span id="overlay-time">0.0</span> s</div>
+                        <div>Max Conc: <span id="overlay-max">0.000</span></div>
+                        <div>Grid: <span id="overlay-grid">256³</span></div>
+                        <div>
+                            Domain: <span id="overlay-domain">256m³</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="loading">
+                    <div class="spinner"></div>
+                    <div>Loading 3D volume data...</div>
+                </div>
+            </div>
+
+            <div id="controls">
+                <h1>🎮 3D Volume Viewer</h1>
+                <div class="subtitle">v44 - Interactive 3D Visualization</div>
+
+                <div id="status">
+                    <strong>Status:</strong>
+                    <span id="status-text">Initializing...</span>
+                </div>
+
+                <div class="section">
+                    <h2>⏯️ Playback</h2>
+                    <button id="play-btn" class="play-button" disabled>
+                        ▶ PLAY
+                    </button>
+
+                    <div class="control-group">
+                        <label>
+                            Timestep:
+                            <span class="value-display" id="timestep-display"
+                                >0 / 12</span
+                            >
+                        </label>
+                        <input
+                            type="range"
+                            id="timestep-slider"
+                            min="0"
+                            max="12"
+                            value="0"
+                            step="1"
+                            disabled
+                        />
+                    </div>
+
+                    <div class="control-group">
+                        <label>
+                            Speed:
+                            <span class="value-display" id="speed-display"
+                                >1.0x</span
+                            >
+                        </label>
+                        <input
+                            type="range"
+                            id="speed-slider"
+                            min="0.2"
+                            max="3.0"
+                            value="1.0"
+                            step="0.1"
+                        />
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>🎨 Volume Rendering</h2>
+
+                    <div class="control-group">
+                        <label>
+                            Opacity:
+                            <span class="value-display" id="opacity-display"
+                                >0.15</span
+                            >
+                        </label>
+                        <input
+                            type="range"
+                            id="opacity-slider"
+                            min="0.01"
+                            max="0.5"
+                            value="0.15"
+                            step="0.01"
+                        />
+                    </div>
+
+                    <div class="control-group">
+                        <label>
+                            Threshold:
+                            <span class="value-display" id="threshold-display"
+                                >0.1</span
+                            >
+                        </label>
+                        <input
+                            type="range"
+                            id="threshold-slider"
+                            min="0.01"
+                            max="2.0"
+                            value="0.1"
+                            step="0.01"
+                        />
+                    </div>
+
+                    <div class="control-group">
+                        <label>
+                            Color Scale:
+                            <span class="value-display" id="scale-display"
+                                >0.3</span
+                            >
+                        </label>
+                        <input
+                            type="range"
+                            id="scale-slider"
+                            min="0.05"
+                            max="1.0"
+                            value="0.3"
+                            step="0.05"
+                        />
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>📦 Obstacles</h2>
+
+                    <div class="control-group">
+                        <label>
+                            <input
+                                type="checkbox"
+                                id="show-obstacles"
+                                checked
+                            />
+                            Show Obstacles
+                        </label>
+                    </div>
+
+                    <div class="control-group">
+                        <label>
+                            Obstacle Opacity:
+                            <span class="value-display" id="obs-opacity-display"
+                                >0.7</span
+                            >
+                        </label>
+                        <input
+                            type="range"
+                            id="obs-opacity-slider"
+                            min="0.0"
+                            max="1.0"
+                            value="0.7"
+                            step="0.1"
+                        />
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>📊 Statistics</h2>
+                    <div id="stats">
+                        <div class="stat-row">
+                            <span class="stat-label">Current Time:</span>
+                            <span class="stat-value" id="stat-time">0.0s</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Render FPS:</span>
+                            <span class="stat-value" id="stat-fps">--</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Data Loaded:</span>
+                            <span class="stat-value" id="stat-loaded"
+                                >0/13</span
+                            >
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Connection:</span>
+                            <span class="stat-value" id="stat-connection"
+                                >Connecting...</span
+                            >
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>🎯 Leak Source (from scene.json)</h2>
+                    <div id="stats">
+                        <div class="stat-row">
+                            <span class="stat-label">Position X:</span>
+                            <span class="stat-value" id="leak-pos-x">--</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Position Y:</span>
+                            <span class="stat-value" id="leak-pos-y">--</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Position Z:</span>
+                            <span class="stat-value" id="leak-pos-z">--</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Data Dir:</span>
+                            <span
+                                class="stat-value"
+                                id="data-dir-info"
+                                style="font-size: 0.7em"
+                                >--</span
+                            >
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>☁️ Cloud Center (from data)</h2>
+                    <div id="stats">
+                        <div class="stat-row">
+                            <span class="stat-label">Center X:</span>
+                            <span class="stat-value" id="cloud-center-x"
+                                >--</span
+                            >
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Center Y:</span>
+                            <span class="stat-value" id="cloud-center-y"
+                                >--</span
+                            >
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Center Z:</span>
+                            <span class="stat-value" id="cloud-center-z"
+                                >--</span
+                            >
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Total Mass:</span>
+                            <span class="stat-value" id="cloud-total-mass"
+                                >--</span
+                            >
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label" style="color: #f44336"
+                                >Offset from Leak:</span
+                            >
+                            <span
+                                class="stat-value"
+                                id="cloud-offset"
+                                style="color: #f44336"
+                                >--</span
+                            >
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>🔧 Actions</h2>
+                    <button id="reset-camera-btn">🔄 Reset Camera</button>
+                    <button id="screenshot-btn">📷 Screenshot</button>
+                </div>
+
+                <div class="section">
+                    <div class="help-text">
+                        <strong>3D Controls:</strong><br />
+                        • Left drag: Rotate view<br />
+                        • Right drag / Two-finger: Pan<br />
+                        • Scroll / Pinch: Zoom<br />
+                        • Space: Play/Pause<br />
+                        • ← →: Step through time
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script type="importmap">
+            {
+                "imports": {
+                    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+                }
+            }
+        </script>
+
+        <script type="module">
+            import * as THREE from "three";
+            import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+            // ========================================================================
+            // Configuration
+            // ========================================================================
+
+            // Configuration - will be updated from server metadata
+            const CONFIG = {
+                nx: 256, // Default, will be overridden by server
+                ny: 256,
+                nz: 256,
+                dx: 1.0,
+                dt: 3.5,
+                maxTimesteps: 60,
+            };
+
+            // ========================================================================
+            // Three.js Scene Setup
+            // ========================================================================
+
+            const canvas = document.getElementById("viewer");
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x808080);
+
+            // Camera
+            const camera = new THREE.PerspectiveCamera(
+                60,
+                canvas.clientWidth / canvas.clientHeight,
+                1,
+                2000,
+            );
+            camera.position.set(300, 300, 300);
+
+            // Renderer
+            const renderer = new THREE.WebGLRenderer({
+                canvas,
+                antialias: true,
+                alpha: true,
+            });
+            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            // Controls
+            const controls = new OrbitControls(camera, canvas);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.target.set(128, 128, 128);
+            controls.update();
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+            directionalLight.position.set(300, 400, 200);
+            scene.add(directionalLight);
+
+            // ========================================================================
+            // Grid Walls (Same as builder)
+            // ========================================================================
+
+            const domainSize = 256;
+            const gridDivisions = 16;
+
+            // Floor
+            const floorGrid = new THREE.GridHelper(
+                domainSize,
+                gridDivisions,
+                0x404040,
+                0x606060,
+            );
+            floorGrid.position.set(128, 0.1, 128);
+            scene.add(floorGrid);
+
+            // Bounding box
+            const boxGeometry = new THREE.BoxGeometry(256, 256, 256);
+            const boxEdges = new THREE.EdgesGeometry(boxGeometry);
+            const boxLines = new THREE.LineSegments(
+                boxEdges,
+                new THREE.LineBasicMaterial({ color: 0x666666, linewidth: 2 }),
+            );
+            boxLines.position.set(128, 128, 128);
+            scene.add(boxLines);
+
+            // Axes helper
+            const axesHelper = new THREE.AxesHelper(150);
+            scene.add(axesHelper);
+
+            // ========================================================================
+            // Data Storage
+            // ========================================================================
+
+            let concentrationData = {};
+            let obstacleData = null;
+            let sceneData = null; // Scene JSON with obstacle shapes
+            let currentTimestep = 0;
+            let isPlaying = false;
+            let playbackSpeed = 1.0;
+            let lastFrameTime = 0;
+
+            let volumeMesh = null;
+            let obstaclesMesh = null;
+            let sceneObstaclesGroup = null; // Group for scene-defined obstacles
+
+            // ========================================================================
+            // WebSocket Connection (same as 2D version)
+            // ========================================================================
+
+            let ws = null;
+            let isConnected = false;
+            let nextMessageIsData = false;
+            let lastMetadata = null;
+
+            function connectWebSocket() {
+                const protocol =
+                    window.location.protocol === "https:" ? "wss:" : "ws:";
+                const wsUrl = `${protocol}//${window.location.host}/ws`;
+
+                console.log("🔌 Connecting to:", wsUrl);
+                updateStatus("Connecting to server...", false);
+
+                ws = new WebSocket(wsUrl);
+                ws.binaryType = "arraybuffer";
+
+                ws.onopen = () => {
+                    console.log("✅ WebSocket connected");
+                    isConnected = true;
+                    updateStatus("Connected! Loading volume...", true);
+                    document.getElementById("stat-connection").textContent =
+                        "Connected";
+
+                    loadTimestep(0);
+                    loadObstacle();
+                };
+
+                ws.onclose = () => {
+                    console.log("❌ WebSocket disconnected");
+                    isConnected = false;
+                    updateStatus("Disconnected", false);
+                    document.getElementById("stat-connection").textContent =
+                        "Disconnected";
+                };
+
+                ws.onerror = (error) => {
+                    console.error("❌ WebSocket error:", error);
+                    updateStatus("Connection error", false);
+                };
+
+                ws.onmessage = (event) => {
+                    if (typeof event.data === "string") {
+                        const data = JSON.parse(event.data);
+                        console.log("📦 Received metadata:", data);
+
+                        if (data.error) {
+                            console.error("❌ Server error:", data.error);
+                            updateStatus(`Error: ${data.error}`, false);
+                            return;
+                        }
+
+                        lastMetadata = data;
+                        nextMessageIsData = true;
+                    } else if (nextMessageIsData && lastMetadata) {
+                        console.log(
+                            `📊 Received ${event.data.byteLength} bytes`,
+                        );
+
+                        if (lastMetadata.type === "obstacle") {
+                            obstacleData = new Int8Array(event.data);
+                            console.log(
+                                "✅ Obstacle data loaded (using scene-based obstacles instead)",
+                            );
+                            // renderObstacles();  // Disabled - using scene-based obstacles from JSON
+                        } else if (lastMetadata.timestep !== undefined) {
+                            const floatArray = new Float32Array(event.data);
+                            concentrationData[lastMetadata.timestep] =
+                                floatArray;
+
+                            console.log(
+                                `✅ Timestep ${lastMetadata.timestep} loaded: max=${lastMetadata.max_value.toFixed(4)}`,
+                            );
+
+                            const loadedCount =
+                                Object.keys(concentrationData).length;
+                            document.getElementById("stat-loaded").textContent =
+                                `${loadedCount}/13`;
+
+                            if (lastMetadata.timestep === currentTimestep) {
+                                renderVolume();
+                                hideLoading();
+                                enableControls();
+                            }
+
+                            if (loadedCount < CONFIG.maxTimesteps) {
+                                setTimeout(
+                                    () => loadTimestep(loadedCount),
+                                    100,
+                                );
+                            } else {
+                                updateStatus("All data loaded! Ready", true);
+                            }
+                        }
+
+                        nextMessageIsData = false;
+                        lastMetadata = null;
+                    }
+                };
+            }
+
+            function loadTimestep(timestep) {
+                if (!isConnected || concentrationData[timestep]) return;
+                ws.send(JSON.stringify({ timestep }));
+            }
+
+            function loadObstacle() {
+                if (!isConnected || obstacleData) return;
+                ws.send(JSON.stringify({ obstacle: true }));
+            }
+
+            function updateStatus(text, connected) {
+                const statusEl = document.getElementById("status");
+                document.getElementById("status-text").textContent = text;
+                statusEl.className = connected
+                    ? "status-connected"
+                    : text.includes("error")
+                      ? "status-error"
+                      : "";
+            }
+
+            function hideLoading() {
+                document.getElementById("loading").style.display = "none";
+            }
+
+            function enableControls() {
+                document.getElementById("play-btn").disabled = false;
+                document.getElementById("timestep-slider").disabled = false;
+            }
+
+            // ========================================================================
+            // 3D Volume Rendering (Point Cloud Approach)
+            // ========================================================================
+
+            function renderVolume() {
+                const data = concentrationData[currentTimestep];
+                if (!data) return;
+
+                // Remove old volume
+                if (volumeMesh) {
+                    scene.remove(volumeMesh);
+                    volumeMesh.geometry.dispose();
+                    volumeMesh.material.dispose();
+                }
+
+                const threshold = parseFloat(
+                    document.getElementById("threshold-slider").value,
+                );
+                const opacity = parseFloat(
+                    document.getElementById("opacity-slider").value,
+                );
+                const scale = parseFloat(
+                    document.getElementById("scale-slider").value,
+                );
+
+                // Find max concentration
+                let maxConc = 0;
+                for (let val of data) {
+                    if (val > maxConc) maxConc = val;
+                }
+                const scaleMax = maxConc / scale;
+
+                // Create point cloud geometry with decimation for performance
+                const positions = [];
+                const colors = [];
+                const sizes = [];
+
+                // Decimation factor: skip every N cells (adjust for performance)
+                const decimate = CONFIG.nx > 200 ? 2 : 1; // Skip every other cell for large grids
+                const maxPoints = 100000; // Hard limit to prevent freezing
+                let pointCount = 0;
+
+                outerLoop: for (let i = 0; i < CONFIG.nx; i += decimate) {
+                    for (let j = 0; j < CONFIG.ny; j += decimate) {
+                        for (let k = 0; k < CONFIG.nz; k += decimate) {
+                            if (pointCount >= maxPoints) break outerLoop;
+                            const idx =
+                                i + j * CONFIG.nx + k * CONFIG.nx * CONFIG.ny;
+                            const conc = data[idx];
+
+                            // Skip if below threshold or obstacle
+                            if (conc < threshold) continue;
+                            if (obstacleData && obstacleData[idx] > 0) continue;
+
+                            // Position (i=X, j=Y, k=Z in Fortran array)
+                            // Cell centers at (i+0.5)*dx to match Fortran (i-0.5)*dx with 0-based indexing
+                            positions.push(
+                                (i + 0.5) * CONFIG.dx,
+                                (j + 0.5) * CONFIG.dx,
+                                (k + 0.5) * CONFIG.dx,
+                            );
+
+                            // Color based on concentration - Enhanced blue gradient with more contrast
+                            const normalized = Math.min(conc / scaleMax, 1.0);
+                            const color = new THREE.Color();
+
+                            if (normalized < 0.2) {
+                                // Very dark blue (low concentration)
+                                const t = normalized / 0.2;
+                                color.setRGB(0, 0.1 * t, 0.3 + t * 0.2);
+                            } else if (normalized < 0.4) {
+                                // Dark to medium blue
+                                const t = (normalized - 0.2) / 0.2;
+                                color.setRGB(0, 0.1 + t * 0.4, 0.5 + t * 0.3);
+                            } else if (normalized < 0.6) {
+                                // Medium blue to cyan
+                                const t = (normalized - 0.4) / 0.2;
+                                color.setRGB(0, 0.5 + t * 0.4, 0.8 + t * 0.2);
+                            } else if (normalized < 0.8) {
+                                // Cyan to bright cyan
+                                const t = (normalized - 0.6) / 0.2;
+                                color.setRGB(t * 0.4, 0.9, 1.0);
+                            } else {
+                                // Bright cyan to yellow (highest concentration)
+                                const t = (normalized - 0.8) / 0.2;
+                                color.setRGB(
+                                    0.4 + t * 0.6,
+                                    0.9 + t * 0.1,
+                                    1.0 - t * 0.3,
+                                );
+                            }
+
+                            colors.push(color.r, color.g, color.b);
+
+                            // Size based on concentration - MUCH LARGER for visibility
+                            sizes.push(10 + normalized * 30);
+                            pointCount++;
+                        }
+                    }
+                }
+
+                // Create point cloud
+                const geometry = new THREE.BufferGeometry();
+                geometry.setAttribute(
+                    "position",
+                    new THREE.Float32BufferAttribute(positions, 3),
+                );
+                geometry.setAttribute(
+                    "color",
+                    new THREE.Float32BufferAttribute(colors, 3),
+                );
+                geometry.setAttribute(
+                    "size",
+                    new THREE.Float32BufferAttribute(sizes, 1),
+                );
+
+                const material = new THREE.PointsMaterial({
+                    size: 25, // Much larger base size for visibility
+                    vertexColors: true,
+                    transparent: true,
+                    opacity: opacity,
+                    sizeAttenuation: true,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                });
+
+                volumeMesh = new THREE.Points(geometry, material);
+                volumeMesh.renderOrder = 999; // Render cloud on top of walls
+                scene.add(volumeMesh);
+
+                // Update overlay
+                const time = currentTimestep * CONFIG.dt;
+                document.getElementById("overlay-time").textContent =
+                    time.toFixed(1);
+                document.getElementById("overlay-max").textContent =
+                    maxConc.toFixed(6);
+                document.getElementById("stat-time").textContent =
+                    `${time.toFixed(1)}s`;
+
+                // Find the position of highest concentration point for debugging
+                let maxIdx = 0;
+                let maxVal = 0;
+                for (let val of data) {
+                    if (val > maxVal) maxVal = val;
+                }
+                // Find grid location of peak
+                for (let i = 0; i < CONFIG.nx; i++) {
+                    for (let j = 0; j < CONFIG.ny; j++) {
+                        for (let k = 0; k < CONFIG.nz; k++) {
+                            const idx =
+                                i + j * CONFIG.nx + k * CONFIG.nx * CONFIG.ny;
+                            if (data[idx] === maxVal) {
+                                console.log(
+                                    `📍 Peak concentration ${maxVal.toFixed(3)} at grid (${i}, ${j}, ${k}) → world (${((i + 0.5) * CONFIG.dx).toFixed(0)}, ${((j + 0.5) * CONFIG.dx).toFixed(0)}, ${((k + 0.5) * CONFIG.dx).toFixed(0)})`,
+                                );
+                                i = CONFIG.nx;
+                                j = CONFIG.ny;
+                                k = CONFIG.nz; // break all
+                            }
+                        }
+                    }
+                }
+
+                console.log(
+                    `✅ Rendered ${positions.length / 3} points (max conc: ${maxConc.toFixed(3)}, threshold: ${threshold.toFixed(3)}, checked ${pointCount} cells)`,
+                );
+
+                // Calculate and display cloud center of mass
+                updateCloudCenterOfMass(data);
+            }
+
+            function updateCloudCenterOfMass(data) {
+                if (!data) return;
+
+                let totalMass = 0;
+                let cx = 0,
+                    cy = 0,
+                    cz = 0;
+                const threshold = 0.001; // Minimum concentration to consider
+
+                for (let i = 0; i < CONFIG.nx; i++) {
+                    for (let j = 0; j < CONFIG.ny; j++) {
+                        for (let k = 0; k < CONFIG.nz; k++) {
+                            const idx =
+                                i + j * CONFIG.nx + k * CONFIG.nx * CONFIG.ny;
+                            const conc = data[idx];
+
+                            if (conc > threshold) {
+                                // World coordinates (cell centers)
+                                const wx = (i + 0.5) * CONFIG.dx;
+                                const wy = (j + 0.5) * CONFIG.dx;
+                                const wz = (k + 0.5) * CONFIG.dx;
+
+                                cx += conc * wx;
+                                cy += conc * wy;
+                                cz += conc * wz;
+                                totalMass += conc;
+                            }
+                        }
+                    }
+                }
+
+                if (totalMass > 0) {
+                    cx /= totalMass;
+                    cy /= totalMass;
+                    cz /= totalMass;
+
+                    document.getElementById("cloud-center-x").textContent =
+                        cx.toFixed(1);
+                    document.getElementById("cloud-center-y").textContent =
+                        cy.toFixed(1);
+                    document.getElementById("cloud-center-z").textContent =
+                        cz.toFixed(1);
+                    document.getElementById("cloud-total-mass").textContent =
+                        totalMass.toFixed(2);
+
+                    // Calculate offset from leak position
+                    if (
+                        sceneData &&
+                        sceneData.leak &&
+                        sceneData.leak.position
+                    ) {
+                        const lx = sceneData.leak.position[0];
+                        const ly = sceneData.leak.position[1];
+                        const lz = sceneData.leak.position[2];
+                        const offset = Math.sqrt(
+                            Math.pow(cx - lx, 2) +
+                                Math.pow(cy - ly, 2) +
+                                Math.pow(cz - lz, 2),
+                        );
+                        document.getElementById("cloud-offset").textContent =
+                            offset.toFixed(1) + "m";
+
+                        // Log detailed diagnostic
+                        console.log(
+                            `☁️ Cloud center: (${cx.toFixed(1)}, ${cy.toFixed(1)}, ${cz.toFixed(1)})`,
+                        );
+                        console.log(`🎯 Leak position: (${lx}, ${ly}, ${lz})`);
+                        console.log(`📏 Offset: ${offset.toFixed(1)}m`);
+                    }
+                } else {
+                    document.getElementById("cloud-center-x").textContent =
+                        "--";
+                    document.getElementById("cloud-center-y").textContent =
+                        "--";
+                    document.getElementById("cloud-center-z").textContent =
+                        "--";
+                    document.getElementById("cloud-total-mass").textContent =
+                        "0";
+                    document.getElementById("cloud-offset").textContent = "--";
+                }
+            }
+
+            function renderObstacles() {
+                if (!obstacleData) return;
+                if (!document.getElementById("show-obstacles").checked) return;
+
+                // Remove old obstacles
+                if (obstaclesMesh) {
+                    scene.remove(obstaclesMesh);
+                    obstaclesMesh.geometry.dispose();
+                    obstaclesMesh.material.dispose();
+                }
+
+                const obsOpacity = parseFloat(
+                    document.getElementById("obs-opacity-slider").value,
+                );
+                if (obsOpacity === 0) return;
+
+                // Create obstacle geometry (voxels)
+                const geometry = new THREE.BoxGeometry(
+                    CONFIG.dx,
+                    CONFIG.dx,
+                    CONFIG.dx,
+                );
+                const material = new THREE.MeshStandardMaterial({
+                    color: 0x8b4513,
+                    transparent: true,
+                    opacity: Math.max(obsOpacity, 0.8),
+                    roughness: 0.6,
+                    metalness: 0.2,
+                });
+
+                const obstaclesGroup = new THREE.InstancedMesh(
+                    geometry,
+                    material,
+                    45000, // Approximate number of obstacle cells
+                );
+
+                let instanceIdx = 0;
+                const matrix = new THREE.Matrix4();
+
+                for (let i = 0; i < CONFIG.nx; i++) {
+                    for (let j = 0; j < CONFIG.ny; j++) {
+                        for (let k = 0; k < CONFIG.nz; k++) {
+                            const idx =
+                                i + j * CONFIG.nx + k * CONFIG.nx * CONFIG.ny;
+                            if (obstacleData[idx] > 0) {
+                                matrix.setPosition(
+                                    i * CONFIG.dx,
+                                    k * CONFIG.dx,
+                                    j * CONFIG.dx,
+                                );
+                                obstaclesGroup.setMatrixAt(instanceIdx, matrix);
+                                instanceIdx++;
+                            }
+                        }
+                    }
+                }
+
+                obstaclesGroup.count = instanceIdx;
+                obstaclesGroup.instanceMatrix.needsUpdate = true;
+
+                obstaclesMesh = obstaclesGroup;
+                scene.add(obstaclesMesh);
+
+                console.log(`✅ Rendered ${instanceIdx} obstacle cells`);
+            }
+
+            // ========================================================================
+            // Scene Obstacles Rendering (from JSON)
+            // ========================================================================
+
+            async function loadScene() {
+                try {
+                    const response = await fetch("/scene");
+                    sceneData = await response.json();
+                    console.log("✅ Loaded scene configuration:", sceneData);
+
+                    // Update diagnostic display
+                    if (sceneData.leak && sceneData.leak.position) {
+                        const pos = sceneData.leak.position;
+                        document.getElementById("leak-pos-x").textContent =
+                            pos[0];
+                        document.getElementById("leak-pos-y").textContent =
+                            pos[1];
+                        document.getElementById("leak-pos-z").textContent =
+                            pos[2];
+                    }
+                    if (sceneData._data_dir) {
+                        document.getElementById("data-dir-info").textContent =
+                            sceneData._data_dir;
+                    }
+
+                    renderSceneObstacles();
+                } catch (error) {
+                    console.warn(
+                        "⚠️ Could not load scene configuration:",
+                        error,
+                    );
+                }
+            }
+
+            function renderSceneObstacles() {
+                if (!sceneData || !sceneData.obstacles) return;
+
+                // Remove old scene obstacles
+                if (sceneObstaclesGroup) {
+                    scene.remove(sceneObstaclesGroup);
+                    sceneObstaclesGroup.traverse((child) => {
+                        if (child.geometry) child.geometry.dispose();
+                        if (child.material) child.material.dispose();
+                    });
+                }
+
+                sceneObstaclesGroup = new THREE.Group();
+
+                // Material for obstacles - semi-transparent
+                const material = new THREE.MeshStandardMaterial({
+                    color: 0x4488ff, // Nice blue color
+                    transparent: true,
+                    opacity: 0.5,
+                    roughness: 0.4,
+                    metalness: 0.3,
+                    side: THREE.DoubleSide,
+                });
+
+                sceneData.obstacles.forEach((obj) => {
+                    if (!obj.isObstacle) return; // Skip openings
+
+                    const pos = obj.position;
+                    const scale = obj.scale || [1, 1, 1];
+                    let mesh;
+
+                    if (obj.type === "box") {
+                        // Default box size: 30x40x20
+                        const size = [
+                            30 * scale[0],
+                            40 * scale[1],
+                            20 * scale[2],
+                        ];
+                        const geometry = new THREE.BoxGeometry(
+                            size[0],
+                            size[1],
+                            size[2],
+                        );
+                        mesh = new THREE.Mesh(geometry, material.clone());
+                        mesh.position.set(pos[0], pos[1], pos[2]);
+                    } else if (obj.type === "cylinder") {
+                        // Default cylinder: radius 15, height 60
+                        const radius = 15 * Math.sqrt(scale[0] * scale[2]);
+                        const height = 60 * scale[1];
+                        const geometry = new THREE.CylinderGeometry(
+                            radius,
+                            radius,
+                            height,
+                            32,
+                        );
+                        mesh = new THREE.Mesh(geometry, material.clone());
+                        mesh.position.set(pos[0], pos[1], pos[2]);
+                    } else if (obj.type === "panel") {
+                        // Default panel: 50x2x50
+                        const size = [
+                            50 * scale[0],
+                            2 * scale[1],
+                            50 * scale[2],
+                        ];
+                        const geometry = new THREE.BoxGeometry(
+                            size[0],
+                            size[1],
+                            size[2],
+                        );
+                        mesh = new THREE.Mesh(geometry, material.clone());
+                        mesh.position.set(pos[0], pos[1], pos[2]);
+                    }
+
+                    if (mesh) {
+                        sceneObstaclesGroup.add(mesh);
+                    }
+                });
+
+                // Add leak source marker (red sphere like in builder)
+                if (sceneData.leak && sceneData.leak.position) {
+                    const leakGeometry = new THREE.SphereGeometry(5, 16, 16);
+                    const leakMaterial = new THREE.MeshStandardMaterial({
+                        color: 0xff0000,
+                        emissive: 0x330000,
+                        metalness: 0.3,
+                        roughness: 0.4,
+                    });
+                    const leakMarker = new THREE.Mesh(
+                        leakGeometry,
+                        leakMaterial,
+                    );
+
+                    // Position leak marker directly (same as obstacles - already in world coordinates)
+                    const pos = sceneData.leak.position;
+                    leakMarker.position.set(pos[0], pos[1], pos[2]);
+
+                    sceneObstaclesGroup.add(leakMarker);
+                    console.log(
+                        `✅ Leak source marker at world position (${pos[0]}, ${pos[1]}, ${pos[2]})`,
+                    );
+                }
+
+                scene.add(sceneObstaclesGroup);
+                console.log(
+                    `✅ Rendered ${sceneData.obstacles.length} scene obstacles`,
+                );
+            }
+
+            // ========================================================================
+            // Animation Loop
+            // ========================================================================
+
+            let fps = 0;
+            let frameCount = 0;
+            let fpsUpdateTime = performance.now();
+
+            function animate(currentTime) {
+                requestAnimationFrame(animate);
+
+                // Update FPS
+                frameCount++;
+                if (currentTime - fpsUpdateTime > 1000) {
+                    fps = Math.round(
+                        (frameCount * 1000) / (currentTime - fpsUpdateTime),
+                    );
+                    document.getElementById("stat-fps").textContent = fps;
+                    frameCount = 0;
+                    fpsUpdateTime = currentTime;
+                }
+
+                // Playback
+                if (isPlaying && concentrationData[currentTimestep]) {
+                    const deltaTime = (currentTime - lastFrameTime) / 1000;
+                    if (deltaTime > 1.0 / (10 * playbackSpeed)) {
+                        currentTimestep++;
+                        if (currentTimestep >= CONFIG.maxTimesteps) {
+                            currentTimestep = 0;
+                        }
+
+                        if (concentrationData[currentTimestep]) {
+                            document.getElementById("timestep-slider").value =
+                                currentTimestep;
+                            document.getElementById(
+                                "timestep-display",
+                            ).textContent =
+                                `${currentTimestep} / ${CONFIG.maxTimesteps - 1}`;
+                            renderVolume();
+                        }
+
+                        lastFrameTime = currentTime;
+                    }
+                }
+
+                controls.update();
+                renderer.render(scene, camera);
+            }
+
+            // ========================================================================
+            // UI Controls
+            // ========================================================================
+
+            document
+                .getElementById("play-btn")
+                .addEventListener("click", () => {
+                    isPlaying = !isPlaying;
+                    const btn = document.getElementById("play-btn");
+                    btn.textContent = isPlaying ? "⏸ PAUSE" : "▶ PLAY";
+                    btn.classList.toggle("playing");
+                    if (isPlaying) {
+                        lastFrameTime = performance.now();
+                    }
+                });
+
+            document
+                .getElementById("timestep-slider")
+                .addEventListener("input", (e) => {
+                    currentTimestep = parseInt(e.target.value);
+                    document.getElementById("timestep-display").textContent =
+                        `${currentTimestep} / ${CONFIG.maxTimesteps - 1}`;
+
+                    if (!concentrationData[currentTimestep]) {
+                        loadTimestep(currentTimestep);
+                    } else {
+                        renderVolume();
+                    }
+                });
+
+            document
+                .getElementById("speed-slider")
+                .addEventListener("input", (e) => {
+                    playbackSpeed = parseFloat(e.target.value);
+                    document.getElementById("speed-display").textContent =
+                        playbackSpeed.toFixed(1) + "x";
+                });
+
+            document
+                .getElementById("opacity-slider")
+                .addEventListener("input", (e) => {
+                    document.getElementById("opacity-display").textContent =
+                        e.target.value;
+                    if (volumeMesh)
+                        volumeMesh.material.opacity = parseFloat(
+                            e.target.value,
+                        );
+                });
+
+            document
+                .getElementById("threshold-slider")
+                .addEventListener("input", (e) => {
+                    document.getElementById("threshold-display").textContent =
+                        e.target.value;
+                    renderVolume();
+                });
+
+            document
+                .getElementById("scale-slider")
+                .addEventListener("input", (e) => {
+                    document.getElementById("scale-display").textContent =
+                        e.target.value;
+                    renderVolume();
+                });
+
+            document
+                .getElementById("show-obstacles")
+                .addEventListener("change", (e) => {
+                    if (e.target.checked) {
+                        renderObstacles();
+                    } else if (obstaclesMesh) {
+                        scene.remove(obstaclesMesh);
+                    }
+                });
+
+            document
+                .getElementById("obs-opacity-slider")
+                .addEventListener("input", (e) => {
+                    document.getElementById("obs-opacity-display").textContent =
+                        e.target.value;
+                    if (obstaclesMesh) {
+                        obstaclesMesh.material.opacity = parseFloat(
+                            e.target.value,
+                        );
+                    }
+                });
+
+            document
+                .getElementById("reset-camera-btn")
+                .addEventListener("click", () => {
+                    camera.position.set(300, 300, 300);
+                    controls.target.set(128, 128, 128);
+                    controls.update();
+                });
+
+            document
+                .getElementById("screenshot-btn")
+                .addEventListener("click", () => {
+                    renderer.render(scene, camera);
+                    canvas.toBlob((blob) => {
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = `boundary_pinn_3d_t${currentTimestep}.png`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    });
+                });
+
+            // Keyboard shortcuts
+            window.addEventListener("keydown", (e) => {
+                if (e.code === "Space") {
+                    e.preventDefault();
+                    document.getElementById("play-btn").click();
+                } else if (e.code === "ArrowRight") {
+                    e.preventDefault();
+                    if (currentTimestep < CONFIG.maxTimesteps - 1) {
+                        document.getElementById("timestep-slider").value =
+                            currentTimestep + 1;
+                        document
+                            .getElementById("timestep-slider")
+                            .dispatchEvent(new Event("input"));
+                    }
+                } else if (e.code === "ArrowLeft") {
+                    e.preventDefault();
+                    if (currentTimestep > 0) {
+                        document.getElementById("timestep-slider").value =
+                            currentTimestep - 1;
+                        document
+                            .getElementById("timestep-slider")
+                            .dispatchEvent(new Event("input"));
+                    }
+                }
+            });
+
+            // Handle window resize
+            window.addEventListener("resize", () => {
+                camera.aspect = canvas.clientWidth / canvas.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            });
+
+            // ========================================================================
+            // Initialize
+            // ========================================================================
+
+            async function initViewer() {
+                console.log("🚀 BoundaryPINN 3D Viewer initializing...");
+
+                // Fetch metadata from server to get correct grid size
+                try {
+                    const response = await fetch("/metadata");
+                    const metadata = await response.json();
+
+                    if (metadata && metadata.grid) {
+                        CONFIG.nx = metadata.grid.nx;
+                        CONFIG.ny = metadata.grid.ny;
+                        CONFIG.nz = metadata.grid.nz;
+                        CONFIG.dx = metadata.domain.dx;
+                        CONFIG.dt = metadata.dt;
+                        CONFIG.maxTimesteps = metadata.timesteps;
+
+                        console.log("✅ Loaded metadata from server:");
+                        console.log(
+                            `   Grid: ${CONFIG.nx}³ = ${CONFIG.nx * CONFIG.ny * CONFIG.nz} cells`,
+                        );
+                        console.log(
+                            `   Domain: ${metadata.domain.size}m, dx=${CONFIG.dx}m`,
+                        );
+                        console.log(
+                            `   Timesteps: ${CONFIG.maxTimesteps}, dt=${CONFIG.dt}s`,
+                        );
+
+                        // Update UI elements with metadata
+                        document.getElementById("overlay-grid").textContent =
+                            `${CONFIG.nx}³`;
+                        document.getElementById("overlay-domain").textContent =
+                            `${metadata.domain.size}m³`;
+                        document.getElementById("timestep-slider").max =
+                            CONFIG.maxTimesteps - 1;
+                    }
+                } catch (error) {
+                    console.warn(
+                        "⚠️ Could not load metadata, using defaults:",
+                        error,
+                    );
+                }
+
+                console.log(
+                    "📊 Grid:",
+                    CONFIG.nx,
+                    "x",
+                    CONFIG.ny,
+                    "x",
+                    CONFIG.nz,
+                );
+
+                connectWebSocket();
+                loadScene(); // Load scene obstacles from JSON
+                animate(0);
+
+                console.log("✅ 3D Viewer ready!");
+            }
+
+            initViewer();
+            console.log(
+                "🎮 Controls: Drag to rotate, scroll to zoom, right-drag to pan",
+            );
+        </script>
+    </body>
+</html>

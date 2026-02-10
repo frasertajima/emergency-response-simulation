@@ -1,0 +1,1872 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta
+            http-equiv="Cache-Control"
+            content="no-cache, no-store, must-revalidate"
+        />
+        <meta http-equiv="Pragma" content="no-cache" />
+        <meta http-equiv="Expires" content="0" />
+        <title>Interactive Simulation Studio - v44</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                background: #1a1a1a;
+                color: #e0e0e0;
+                overflow: hidden;
+            }
+
+            #container {
+                display: flex;
+                height: 100vh;
+            }
+
+            /* Main 3D Canvas Area */
+            #canvas-container {
+                flex: 1;
+                position: relative;
+                background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+            }
+
+            #viewer {
+                width: 100%;
+                height: 100%;
+                display: block;
+            }
+
+            /* Mode Toggle at Top */
+            #mode-controls {
+                position: absolute;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(0, 0, 0, 0.8);
+                padding: 15px 30px;
+                border-radius: 10px;
+                z-index: 100;
+                display: flex;
+                gap: 15px;
+                align-items: center;
+                border: 2px solid #ff6b00;
+            }
+
+            #mode-controls h2 {
+                color: #ff6b00;
+                font-size: 1.2em;
+                margin-right: 10px;
+            }
+
+            .mode-btn {
+                padding: 10px 25px;
+                background: #333;
+                border: 2px solid #666;
+                color: #e0e0e0;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 1em;
+                font-weight: bold;
+                transition: all 0.3s;
+            }
+
+            .mode-btn:hover {
+                background: #444;
+                border-color: #ff6b00;
+            }
+
+            .mode-btn.active {
+                background: linear-gradient(135deg, #ff6b00 0%, #ff8800 100%);
+                border-color: #ff6b00;
+                color: white;
+            }
+
+            /* Inventory Panel (Left Side) */
+            #inventory-panel {
+                width: 300px;
+                background: rgba(30, 30, 30, 0.95);
+                padding: 20px;
+                overflow-y: auto;
+                border-right: 2px solid #ff6b00;
+                display: none; /* Hidden in view mode */
+            }
+
+            #inventory-panel.active {
+                display: block;
+            }
+
+            #inventory-panel h2 {
+                color: #ff6b00;
+                font-size: 1.3em;
+                margin-bottom: 20px;
+                text-align: center;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+
+            .inventory-section {
+                margin-bottom: 30px;
+            }
+
+            .inventory-section h3 {
+                color: #2196f3;
+                font-size: 1em;
+                margin-bottom: 15px;
+                padding-bottom: 8px;
+                border-bottom: 2px solid #2196f3;
+            }
+
+            .shape-item {
+                background: #2a2a2a;
+                padding: 15px;
+                margin-bottom: 10px;
+                border-radius: 8px;
+                border: 2px solid #444;
+                cursor: grab;
+                transition: all 0.3s;
+            }
+
+            .shape-item:hover {
+                background: #333;
+                border-color: #ff6b00;
+                transform: translateX(5px);
+            }
+
+            .shape-item:active {
+                cursor: grabbing;
+            }
+
+            .shape-item h4 {
+                color: #ff6b00;
+                font-size: 0.95em;
+                margin-bottom: 5px;
+            }
+
+            .shape-item p {
+                font-size: 0.8em;
+                color: #999;
+                line-height: 1.4;
+            }
+
+            .shape-icon {
+                display: inline-block;
+                width: 20px;
+                height: 20px;
+                margin-right: 8px;
+                vertical-align: middle;
+            }
+
+            /* Control Panel (Right Side) */
+            #control-panel {
+                width: 350px;
+                background: rgba(30, 30, 30, 0.95);
+                padding: 20px;
+                overflow-y: auto;
+                border-left: 2px solid #2196f3;
+            }
+
+            #control-panel h1 {
+                font-size: 1.4em;
+                margin-bottom: 5px;
+                color: #2196f3;
+                text-align: center;
+            }
+
+            .subtitle {
+                font-size: 0.85em;
+                color: #666;
+                margin-bottom: 20px;
+                text-align: center;
+                padding-bottom: 15px;
+                border-bottom: 2px solid #333;
+            }
+
+            .section {
+                margin-bottom: 25px;
+                background: #2a2a2a;
+                padding: 15px;
+                border-radius: 8px;
+                border: 1px solid #444;
+            }
+
+            .section h2 {
+                font-size: 1em;
+                color: #ff6b00;
+                margin-bottom: 12px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                font-weight: 600;
+            }
+
+            .control-group {
+                margin-bottom: 15px;
+            }
+
+            label {
+                display: block;
+                margin-bottom: 5px;
+                font-size: 0.9em;
+                color: #bbb;
+                font-weight: 500;
+            }
+
+            .value-display {
+                display: inline-block;
+                float: right;
+                color: #2196f3;
+                font-weight: bold;
+                font-size: 0.95em;
+            }
+
+            input[type="range"] {
+                width: 100%;
+                height: 6px;
+                background: #444;
+                border-radius: 3px;
+                outline: none;
+            }
+
+            input[type="range"]::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 18px;
+                height: 18px;
+                background: #2196f3;
+                border-radius: 50%;
+                cursor: pointer;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            }
+
+            input[type="range"]::-moz-range-thumb {
+                width: 18px;
+                height: 18px;
+                background: #2196f3;
+                border-radius: 50%;
+                cursor: pointer;
+                border: none;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            }
+
+            input[type="number"] {
+                width: 100%;
+                padding: 8px;
+                background: #1a1a1a;
+                border: 1px solid #444;
+                border-radius: 4px;
+                color: #e0e0e0;
+                font-size: 0.9em;
+            }
+
+            button {
+                width: 100%;
+                padding: 12px;
+                margin: 5px 0;
+                background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+                border: none;
+                border-radius: 5px;
+                color: white;
+                font-size: 0.95em;
+                font-weight: bold;
+                cursor: pointer;
+                transition: all 0.3s;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            }
+
+            button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 10px rgba(33, 150, 243, 0.4);
+            }
+
+            button:active {
+                transform: translateY(0);
+            }
+
+            .run-button {
+                background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+                font-size: 1.1em;
+                padding: 15px;
+                margin-top: 10px;
+            }
+
+            .run-button:hover {
+                box-shadow: 0 4px 10px rgba(76, 175, 80, 0.4);
+            }
+
+            .reset-button {
+                background: linear-gradient(135deg, #ff6b00 0%, #ff8800 100%);
+            }
+
+            .reset-button:hover {
+                box-shadow: 0 4px 10px rgba(255, 107, 0, 0.4);
+            }
+
+            #status {
+                padding: 12px;
+                background: rgba(33, 150, 243, 0.2);
+                border-radius: 5px;
+                font-size: 0.85em;
+                margin-bottom: 15px;
+                border-left: 4px solid #2196f3;
+            }
+
+            .status-success {
+                background: rgba(76, 175, 80, 0.2);
+                border-left-color: #4caf50;
+            }
+
+            .status-error {
+                background: rgba(244, 67, 54, 0.2);
+                border-left-color: #f44336;
+            }
+
+            .help-text {
+                font-size: 0.75em;
+                color: #888;
+                line-height: 1.6;
+                background: rgba(0, 0, 0, 0.3);
+                padding: 10px;
+                border-radius: 5px;
+                margin-top: 10px;
+            }
+
+            /* Instructions overlay */
+            #instructions {
+                position: absolute;
+                top: 100px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(0, 0, 0, 0.9);
+                padding: 20px 30px;
+                border-radius: 10px;
+                border: 2px solid #ff6b00;
+                z-index: 90;
+                max-width: 600px;
+                display: none;
+            }
+
+            #instructions.active {
+                display: block;
+            }
+
+            #instructions h3 {
+                color: #ff6b00;
+                margin-bottom: 15px;
+            }
+
+            #instructions ul {
+                list-style: none;
+                padding: 0;
+            }
+
+            #instructions li {
+                padding: 8px 0;
+                color: #e0e0e0;
+                font-size: 0.9em;
+            }
+
+            #instructions li::before {
+                content: "▸ ";
+                color: #2196f3;
+                font-weight: bold;
+                margin-right: 8px;
+            }
+
+            .close-btn {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                background: none;
+                border: none;
+                color: #ff6b00;
+                font-size: 1.5em;
+                cursor: pointer;
+                padding: 5px 10px;
+                width: auto;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="container">
+            <!-- Inventory Panel (Left) - Only visible in Build Mode -->
+            <div id="inventory-panel" class="active">
+                <h2>🛒 Shape Inventory</h2>
+
+                <div class="inventory-section">
+                    <h3>🏗️ Structures</h3>
+
+                    <div class="shape-item" data-shape="panel" draggable="true">
+                        <h4><span class="shape-icon">▭</span>Flat Panel</h4>
+                        <p>Walls, floors, ceilings. Drag to resize.</p>
+                    </div>
+
+                    <div class="shape-item" data-shape="box" draggable="true">
+                        <h4>
+                            <span class="shape-icon">◻</span>Box Obstruction
+                        </h4>
+                        <p>Solid rectangular obstacle. Stretchable.</p>
+                    </div>
+
+                    <div
+                        class="shape-item"
+                        data-shape="cylinder"
+                        draggable="true"
+                    >
+                        <h4><span class="shape-icon">○</span>Cylinder</h4>
+                        <p>Round obstacle like tanks, pillars.</p>
+                    </div>
+
+                    <div
+                        class="shape-item"
+                        data-shape="opening"
+                        draggable="true"
+                    >
+                        <h4><span class="shape-icon">▢</span>Opening</h4>
+                        <p>Door or window - chemical can pass through.</p>
+                    </div>
+                </div>
+
+                <div class="help-text">
+                    <strong>How to use:</strong><br />
+                    • Drag shapes from here into the simulation box<br />
+                    • <strong>Left-click</strong> object to select (shows
+                    arrows)<br />
+                    • <strong>Drag arrows</strong> to move object<br />
+                    • <strong>Ctrl+Left-Click</strong> to duplicate<br />
+                    • <strong>Ctrl+Right-drag</strong> for free movement<br />
+                    • <strong>Delete/Backspace</strong> to remove
+                </div>
+            </div>
+
+            <!-- Main 3D Canvas -->
+            <div id="canvas-container">
+                <canvas id="viewer"></canvas>
+
+                <!-- Mode Toggle -->
+                <div id="mode-controls">
+                    <h2>Mode:</h2>
+                    <button class="mode-btn active" id="build-mode-btn">
+                        🏗️ Build
+                    </button>
+                    <button class="mode-btn" id="view-mode-btn">👁️ View</button>
+                    <button
+                        class="mode-btn"
+                        id="help-btn"
+                        style="margin-left: 20px"
+                    >
+                        ❓ Help
+                    </button>
+                </div>
+
+                <!-- Instructions Overlay -->
+                <div id="instructions">
+                    <button class="close-btn" id="close-instructions">×</button>
+                    <h3>🎮 Interactive Studio Controls</h3>
+                    <ul>
+                        <li>
+                            <strong>Build Mode:</strong> Design your scenario
+                        </li>
+                        <li>Drag shapes from left inventory panel</li>
+                        <li>
+                            <strong>Left-click</strong> to select (shows arrows)
+                        </li>
+                        <li><strong>Drag arrows</strong> to move precisely</li>
+                        <li><strong>Ctrl+Left-Click</strong> to duplicate</li>
+                        <li>
+                            <strong>Ctrl+Right-drag</strong> for free movement
+                        </li>
+                        <li><strong>Delete/Backspace</strong> to remove</li>
+                        <li>Click "Leak Position" then click in scene</li>
+                        <li>Adjust all parameters in right panel</li>
+                        <li><strong>View Mode:</strong> Analyze results</li>
+                        <li>Orbit: Left drag</li>
+                        <li>Pan: Right drag / Two-finger</li>
+                        <li>Zoom: Scroll / Pinch</li>
+                        <li>
+                            <strong>Run Simulation:</strong> Click big green
+                            button!
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Control Panel (Right) -->
+            <div id="control-panel">
+                <h1>🎛️ Studio Controls</h1>
+                <div class="subtitle">Interactive Simulation Studio v44</div>
+
+                <div id="status">
+                    <strong>Status:</strong>
+                    <span id="status-text"
+                        >Build Mode - Design your scenario</span
+                    >
+                </div>
+
+                <!-- ACTION BUTTONS (Top for easy access) -->
+                <div
+                    style="
+                        margin: 15px 0;
+                        padding: 15px;
+                        background: rgba(255, 107, 0, 0.1);
+                        border-radius: 8px;
+                        border: 1px solid #ff6b00;
+                    "
+                >
+                    <button class="reset-button" id="reset-btn">
+                        🔄 Reset to Defaults
+                    </button>
+                    <button class="run-button" id="run-simulation-btn">
+                        ▶️ RUN SIMULATION
+                    </button>
+                    <button
+                        class="run-button"
+                        id="view-results-btn"
+                        style="
+                            display: none;
+                            background: linear-gradient(
+                                135deg,
+                                #00c853 0%,
+                                #00e676 100%
+                            );
+                        "
+                    >
+                        👁️ VIEW RESULTS
+                    </button>
+                </div>
+
+                <!-- CREATE SCENE SECTION (Top) -->
+                <div class="section" id="scene-controls">
+                    <h2>📐 Scene Setup</h2>
+
+                    <button id="new-scene-btn">🆕 New Scene</button>
+                    <button id="save-scene-btn">💾 Save Scene</button>
+                    <button id="load-scene-btn">📂 Load Scene</button>
+
+                    <div class="control-group" style="margin-top: 15px">
+                        <label
+                            >Grid Resolution:
+                            <span class="value-display">128³</span></label
+                        >
+                        <p style="font-size: 0.8em; color: #888">
+                            Fixed at 128×128×128 (2m cells, 256m domain)
+                        </p>
+                    </div>
+                </div>
+
+                <!-- LEAK CONFIGURATION -->
+                <div class="section">
+                    <h2>💨 Leak Source</h2>
+
+                    <button id="place-leak-btn">📍 Click to Place Leak</button>
+
+                    <div class="control-group">
+                        <label>
+                            Position X:
+                            <span class="value-display" id="leak-x-display"
+                                >128</span
+                            >
+                        </label>
+                        <input
+                            type="number"
+                            id="leak-x"
+                            value="128"
+                            min="0"
+                            max="256"
+                        />
+                    </div>
+
+                    <div class="control-group">
+                        <label>
+                            Position Y:
+                            <span class="value-display" id="leak-y-display"
+                                >32</span
+                            >
+                        </label>
+                        <input
+                            type="number"
+                            id="leak-y"
+                            value="32"
+                            min="0"
+                            max="256"
+                        />
+                    </div>
+
+                    <div class="control-group">
+                        <label>
+                            Position Z:
+                            <span class="value-display" id="leak-z-display"
+                                >128</span
+                            >
+                        </label>
+                        <input
+                            type="number"
+                            id="leak-z"
+                            value="128"
+                            min="0"
+                            max="256"
+                        />
+                    </div>
+
+                    <div class="control-group">
+                        <label>
+                            Leak Rate (kg/s):
+                            <span class="value-display" id="leak-rate-display"
+                                >5.0</span
+                            >
+                        </label>
+                        <input
+                            type="range"
+                            id="leak-rate"
+                            min="0.1"
+                            max="20.0"
+                            value="5.0"
+                            step="0.1"
+                        />
+                    </div>
+
+                    <div class="control-group">
+                        <label>
+                            Growth Time (s):
+                            <span class="value-display" id="leak-growth-display"
+                                >40</span
+                            >
+                        </label>
+                        <input
+                            type="range"
+                            id="leak-growth"
+                            min="0"
+                            max="120"
+                            value="40"
+                            step="5"
+                        />
+                    </div>
+
+                    <div class="control-group">
+                        <label>
+                            Decay Start (s):
+                            <span class="value-display" id="leak-decay-display"
+                                >60</span
+                            >
+                        </label>
+                        <input
+                            type="range"
+                            id="leak-decay"
+                            min="0"
+                            max="200"
+                            value="60"
+                            step="5"
+                        />
+                    </div>
+                </div>
+
+                <!-- WIND CONFIGURATION -->
+                <div class="section">
+                    <h2>🌬️ Wind Conditions</h2>
+
+                    <div class="control-group">
+                        <label>
+                            Wind U (m/s):
+                            <span class="value-display" id="wind-u-display"
+                                >2.0</span
+                            >
+                        </label>
+                        <input
+                            type="range"
+                            id="wind-u"
+                            min="-10"
+                            max="10"
+                            value="2.0"
+                            step="0.1"
+                        />
+                    </div>
+
+                    <div class="control-group">
+                        <label>
+                            Wind V (m/s):
+                            <span class="value-display" id="wind-v-display"
+                                >0.3</span
+                            >
+                        </label>
+                        <input
+                            type="range"
+                            id="wind-v"
+                            min="-10"
+                            max="10"
+                            value="0.3"
+                            step="0.1"
+                        />
+                    </div>
+
+                    <div class="control-group">
+                        <label>
+                            Wind W (m/s):
+                            <span class="value-display" id="wind-w-display"
+                                >0.0</span
+                            >
+                        </label>
+                        <input
+                            type="range"
+                            id="wind-w"
+                            min="-10"
+                            max="10"
+                            value="0.0"
+                            step="0.1"
+                        />
+                    </div>
+                </div>
+
+                <!-- PHYSICS PARAMETERS -->
+                <div class="section">
+                    <h2>⚗️ Physics</h2>
+
+                    <div class="control-group">
+                        <label>
+                            Diffusivity (m²/s):
+                            <span class="value-display" id="diffusivity-display"
+                                >0.5</span
+                            >
+                        </label>
+                        <input
+                            type="range"
+                            id="diffusivity"
+                            min="0.1"
+                            max="2.0"
+                            value="0.5"
+                            step="0.1"
+                        />
+                    </div>
+
+                    <div class="control-group">
+                        <label>
+                            Decay Rate (1/s):
+                            <span class="value-display" id="decay-display"
+                                >0.05</span
+                            >
+                        </label>
+                        <input
+                            type="range"
+                            id="decay"
+                            min="0.0"
+                            max="0.5"
+                            value="0.05"
+                            step="0.01"
+                        />
+                    </div>
+                </div>
+
+                <!-- SIMULATION PARAMETERS -->
+                <div class="section">
+                    <h2>⏱️ Simulation Duration</h2>
+
+                    <div class="control-group">
+                        <label>
+                            Total Time (s):
+                            <span class="value-display" id="total-time-display"
+                                >120</span
+                            >
+                        </label>
+                        <input
+                            type="range"
+                            id="total-time"
+                            min="30"
+                            max="300"
+                            value="120"
+                            step="10"
+                        />
+                    </div>
+
+                    <div class="control-group">
+                        <label>
+                            Number of Frames:
+                            <span class="value-display" id="frames-display"
+                                >60</span
+                            >
+                        </label>
+                        <input
+                            type="range"
+                            id="frames"
+                            min="20"
+                            max="200"
+                            value="60"
+                            step="10"
+                        />
+                    </div>
+
+                    <div class="control-group">
+                        <label
+                            >Frame Interval:
+                            <span
+                                class="value-display"
+                                id="frame-interval-display"
+                                >2.0s</span
+                            ></label
+                        >
+                        <p style="font-size: 0.8em; color: #888">
+                            Calculated: Total Time / Frames
+                        </p>
+                    </div>
+                </div>
+
+                <div class="help-text">
+                    <strong>Workflow:</strong><br />
+                    1. Build Mode: Design scene<br />
+                    2. Adjust all parameters<br />
+                    3. Click RUN SIMULATION<br />
+                    4. View Mode: Analyze results<br />
+                    5. Screen record interesting scenarios!
+                </div>
+            </div>
+        </div>
+
+        <script type="importmap">
+            {
+                "imports": {
+                    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+                }
+            }
+        </script>
+
+        <script type="module">
+            import * as THREE from "three";
+            import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+            import { TransformControls } from "three/addons/controls/TransformControls.js";
+
+            // ========================================================================
+            // Configuration
+            // ========================================================================
+
+            const CONFIG = {
+                nx: 128, // Match simulation grid
+                ny: 128,
+                nz: 128,
+                dx: 2.0, // 2 meters per cell
+                domainSize: 256, // Total domain still 256m
+            };
+
+            // ========================================================================
+            // Scene Setup
+            // ========================================================================
+
+            const canvas = document.getElementById("viewer");
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x808080);
+
+            // Camera
+            const camera = new THREE.PerspectiveCamera(
+                60,
+                canvas.clientWidth / canvas.clientHeight,
+                1,
+                2000,
+            );
+            camera.position.set(400, 400, 400);
+
+            // Renderer
+            const renderer = new THREE.WebGLRenderer({
+                canvas,
+                antialias: true,
+            });
+            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            // Orbit Controls
+            const orbitControls = new OrbitControls(camera, canvas);
+            orbitControls.enableDamping = true;
+            orbitControls.dampingFactor = 0.05;
+            orbitControls.target.set(128, 128, 128);
+            orbitControls.update();
+
+            // Transform Controls (for object manipulation in build mode)
+            const transformControls = new TransformControls(camera, canvas);
+            transformControls.setMode("translate"); // Start in translate mode
+            transformControls.setSize(1.5); // Make arrows bigger and easier to see
+            transformControls.addEventListener("dragging-changed", (event) => {
+                orbitControls.enabled = !event.value;
+            });
+
+            // Update leak position inputs when leak marker is moved
+            transformControls.addEventListener("objectChange", () => {
+                if (
+                    selectedObject &&
+                    selectedObject.userData.shapeType === "leak_source"
+                ) {
+                    const pos = selectedObject.position;
+                    document.getElementById("leak-x").value = Math.round(pos.x);
+                    document.getElementById("leak-y").value = Math.round(pos.y);
+                    document.getElementById("leak-z").value = Math.round(pos.z);
+                    document.getElementById("leak-x-display").textContent =
+                        Math.round(pos.x);
+                    document.getElementById("leak-y-display").textContent =
+                        Math.round(pos.y);
+                    document.getElementById("leak-z-display").textContent =
+                        Math.round(pos.z);
+                }
+            });
+            scene.add(transformControls);
+            console.log("✅ Transform controls initialized");
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+            directionalLight.position.set(300, 400, 200);
+            scene.add(directionalLight);
+
+            // ========================================================================
+            // Grid Walls (Same as v42)
+            // ========================================================================
+
+            const domainSize = 256;
+            const gridDivisions = 16;
+
+            // Floor
+            const floorGrid = new THREE.GridHelper(
+                domainSize,
+                gridDivisions,
+                0x404040,
+                0x606060,
+            );
+            floorGrid.position.set(128, 0.1, 128);
+            scene.add(floorGrid);
+
+            // Bounding box
+            const boxGeometry = new THREE.BoxGeometry(256, 256, 256);
+            const boxEdges = new THREE.EdgesGeometry(boxGeometry);
+            const boxLines = new THREE.LineSegments(
+                boxEdges,
+                new THREE.LineBasicMaterial({ color: 0x666666, linewidth: 2 }),
+            );
+            boxLines.position.set(128, 128, 128);
+            scene.add(boxLines);
+
+            // Axes helper
+            const axesHelper = new THREE.AxesHelper(150);
+            scene.add(axesHelper);
+
+            // ========================================================================
+            // Scene State
+            // ========================================================================
+
+            let currentMode = "build"; // "view" or "build" - DEFAULT TO BUILD
+            let sceneObjects = []; // User-placed objects
+            let leakMarker = null;
+            let selectedObject = null;
+
+            // ========================================================================
+            // Mode Switching
+            // ========================================================================
+
+            document
+                .getElementById("build-mode-btn")
+                .addEventListener("click", () => {
+                    enterBuildMode();
+                });
+
+            document
+                .getElementById("view-mode-btn")
+                .addEventListener("click", () => {
+                    enterViewMode();
+                });
+
+            function enterBuildMode() {
+                currentMode = "build";
+                document
+                    .getElementById("build-mode-btn")
+                    .classList.add("active");
+                document
+                    .getElementById("view-mode-btn")
+                    .classList.remove("active");
+                document
+                    .getElementById("inventory-panel")
+                    .classList.add("active");
+                document.getElementById("status-text").textContent =
+                    "Build Mode - Design your scenario";
+                console.log("✏️ Entered Build Mode");
+            }
+
+            function enterViewMode() {
+                currentMode = "view";
+                document
+                    .getElementById("view-mode-btn")
+                    .classList.add("active");
+                document
+                    .getElementById("build-mode-btn")
+                    .classList.remove("active");
+                document
+                    .getElementById("inventory-panel")
+                    .classList.remove("active");
+                transformControls.detach();
+                document.getElementById("status-text").textContent =
+                    "View Mode - Analyze results";
+                console.log("👁️ Entered View Mode");
+            }
+
+            // Help button
+            document
+                .getElementById("help-btn")
+                .addEventListener("click", () => {
+                    document
+                        .getElementById("instructions")
+                        .classList.toggle("active");
+                });
+
+            document
+                .getElementById("close-instructions")
+                .addEventListener("click", () => {
+                    document
+                        .getElementById("instructions")
+                        .classList.remove("active");
+                });
+
+            // ========================================================================
+            // Shape Creation Functions
+            // ========================================================================
+
+            function createPanel(position = [128, 64, 128]) {
+                const geometry = new THREE.BoxGeometry(50, 2, 50);
+                const material = new THREE.MeshStandardMaterial({
+                    color: 0x8b4513,
+                    transparent: true,
+                    opacity: 0.8,
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(position[0], position[1], position[2]);
+                mesh.userData.shapeType = "panel";
+                mesh.userData.isObstacle = true;
+                return mesh;
+            }
+
+            function createBox(position = [128, 64, 128]) {
+                const geometry = new THREE.BoxGeometry(30, 40, 20);
+                const material = new THREE.MeshStandardMaterial({
+                    color: 0x8b4513,
+                    transparent: true,
+                    opacity: 0.8,
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(position[0], position[1], position[2]);
+                mesh.userData.shapeType = "box";
+                mesh.userData.isObstacle = true;
+                return mesh;
+            }
+
+            function createCylinder(position = [128, 64, 128]) {
+                const geometry = new THREE.CylinderGeometry(15, 15, 60, 32);
+                const material = new THREE.MeshStandardMaterial({
+                    color: 0x8b4513,
+                    transparent: true,
+                    opacity: 0.8,
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(position[0], position[1], position[2]);
+                mesh.userData.shapeType = "cylinder";
+                mesh.userData.isObstacle = true;
+                return mesh;
+            }
+
+            function createOpening(position = [128, 64, 128]) {
+                const geometry = new THREE.BoxGeometry(20, 30, 5);
+                const material = new THREE.MeshStandardMaterial({
+                    color: 0x00ff00,
+                    transparent: true,
+                    opacity: 0.3,
+                    wireframe: true,
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(position[0], position[1], position[2]);
+                mesh.userData.shapeType = "opening";
+                mesh.userData.isObstacle = false; // Chemical can pass through
+                return mesh;
+            }
+
+            // ========================================================================
+            // Drag and Drop from Inventory
+            // ========================================================================
+
+            const shapeItems = document.querySelectorAll(".shape-item");
+
+            shapeItems.forEach((item) => {
+                item.addEventListener("dragstart", (e) => {
+                    const shapeType =
+                        e.target.closest(".shape-item").dataset.shape;
+                    e.dataTransfer.setData("shapeType", shapeType);
+                    console.log(`📦 Dragging ${shapeType}`);
+                });
+            });
+
+            canvas.addEventListener("dragover", (e) => {
+                e.preventDefault();
+            });
+
+            canvas.addEventListener("drop", (e) => {
+                e.preventDefault();
+
+                if (currentMode !== "build") return;
+
+                const shapeType = e.dataTransfer.getData("shapeType");
+                if (!shapeType) return;
+
+                // Get drop position in 3D space (center of domain for now)
+                const dropPosition = [128, 64, 128];
+
+                let shape;
+                switch (shapeType) {
+                    case "panel":
+                        shape = createPanel(dropPosition);
+                        break;
+                    case "box":
+                        shape = createBox(dropPosition);
+                        break;
+                    case "cylinder":
+                        shape = createCylinder(dropPosition);
+                        break;
+                    case "opening":
+                        shape = createOpening(dropPosition);
+                        break;
+                }
+
+                if (shape) {
+                    scene.add(shape);
+                    sceneObjects.push(shape);
+                    console.log(`✅ Added ${shapeType} to scene`);
+                }
+            });
+
+            // ========================================================================
+            // Object Selection and Transform
+            // ========================================================================
+
+            canvas.addEventListener("click", (e) => {
+                if (currentMode !== "build") return;
+
+                console.log("🖱️ Click detected in build mode");
+                console.log("Scene objects:", sceneObjects.length);
+
+                const rect = canvas.getBoundingClientRect();
+                const mouse = new THREE.Vector2(
+                    ((e.clientX - rect.left) / rect.width) * 2 - 1,
+                    -((e.clientY - rect.top) / rect.height) * 2 + 1,
+                );
+
+                const raycaster = new THREE.Raycaster();
+                raycaster.setFromCamera(mouse, camera);
+
+                const intersects = raycaster.intersectObjects(sceneObjects);
+                console.log("Intersections found:", intersects.length);
+
+                if (intersects.length > 0) {
+                    const clickedObject = intersects[0].object;
+
+                    // Ctrl+Right-Click to move/drag object
+                    if ((e.ctrlKey || e.metaKey) && e.button === 2) {
+                        e.preventDefault();
+                        orbitControls.enabled = false; // Disable orbit controls while dragging
+                        selectedObject = clickedObject;
+                        transformControls.setMode("translate");
+                        transformControls.attach(selectedObject);
+                        console.log(
+                            `🎯 Move mode: ${selectedObject.userData.shapeType}`,
+                        );
+                        document.getElementById("status-text").textContent =
+                            `Ctrl+Right-dragging ${selectedObject.userData.shapeType} - Release to finish`;
+                        return;
+                    }
+
+                    // Ctrl+Left-Click to duplicate (but not leak source - only one leak allowed)
+                    if ((e.ctrlKey || e.metaKey) && e.button === 0) {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        if (
+                            clickedObject.userData.shapeType === "leak_source"
+                        ) {
+                            document.getElementById("status-text").textContent =
+                                "Cannot duplicate leak source - only one leak allowed per scenario";
+                            return;
+                        }
+
+                        const duplicate = clickedObject.clone();
+                        duplicate.position.x += 20; // Offset the duplicate
+                        duplicate.position.z += 20;
+                        scene.add(duplicate);
+                        sceneObjects.push(duplicate);
+                        console.log(
+                            `📋 Duplicated ${clickedObject.userData.shapeType}`,
+                        );
+                        document.getElementById("status-text").textContent =
+                            `Duplicated ${clickedObject.userData.shapeType}! (now have ${sceneObjects.length} objects)`;
+                        return;
+                    }
+
+                    // Regular left-click to select and show transform controls
+                    if (e.button === 0) {
+                        // Deselect previous object
+                        if (
+                            selectedObject &&
+                            selectedObject !== clickedObject
+                        ) {
+                            selectedObject.material.emissive.setHex(0x000000);
+                        }
+
+                        selectedObject = clickedObject;
+
+                        // Highlight selected object
+                        if (selectedObject.material.emissive) {
+                            selectedObject.material.emissive.setHex(0x444444);
+                        }
+
+                        transformControls.setMode("translate");
+                        transformControls.attach(selectedObject);
+                        console.log(
+                            `🎯 Selected ${selectedObject.userData.shapeType}`,
+                        );
+                        console.log("Transform controls attached!");
+                        document.getElementById("status-text").textContent =
+                            `Selected ${selectedObject.userData.shapeType} - Drag arrows to move, Ctrl+Left-Click to duplicate, Delete to remove`;
+                    }
+                } else {
+                    // Click on empty space - deselect
+                    if (e.button === 0 && !e.ctrlKey && !e.metaKey) {
+                        if (
+                            selectedObject &&
+                            selectedObject.material.emissive
+                        ) {
+                            selectedObject.material.emissive.setHex(0x000000);
+                        }
+                        transformControls.detach();
+                        selectedObject = null;
+                        document.getElementById("status-text").textContent =
+                            "Build Mode - Drag shapes from inventory or click objects to select";
+                    }
+                }
+            });
+
+            // Re-enable orbit controls when mouse is released
+            canvas.addEventListener("mouseup", (e) => {
+                if (e.button === 2) {
+                    orbitControls.enabled = true;
+                }
+            });
+
+            // Prevent context menu on right-click in build mode
+            canvas.addEventListener("contextmenu", (e) => {
+                if (currentMode === "build") {
+                    e.preventDefault();
+                }
+            });
+
+            // Delete selected object (Delete or Backspace key)
+            window.addEventListener("keydown", (e) => {
+                if (
+                    (e.key === "Delete" || e.key === "Backspace") &&
+                    selectedObject &&
+                    currentMode === "build"
+                ) {
+                    e.preventDefault(); // Prevent backspace navigation
+
+                    // Don't allow deleting leak source
+                    if (selectedObject.userData.shapeType === "leak_source") {
+                        document.getElementById("status-text").textContent =
+                            "Cannot delete leak source - move it instead or click 'Place Leak' to reposition";
+                        return;
+                    }
+
+                    const deletedType = selectedObject.userData.shapeType;
+
+                    // Remove highlight
+                    if (selectedObject.material.emissive) {
+                        selectedObject.material.emissive.setHex(0x000000);
+                    }
+
+                    scene.remove(selectedObject);
+                    sceneObjects = sceneObjects.filter(
+                        (obj) => obj !== selectedObject,
+                    );
+                    transformControls.detach();
+                    console.log(`🗑️ Deleted ${deletedType}`);
+                    document.getElementById("status-text").textContent =
+                        `Deleted ${deletedType} (${sceneObjects.length} objects remaining)`;
+                    selectedObject = null;
+                }
+            });
+
+            // ========================================================================
+            // Parameter Controls
+            // ========================================================================
+
+            // Update displays when sliders change
+            const sliders = [
+                { id: "leak-rate", display: "leak-rate-display" },
+                { id: "leak-growth", display: "leak-growth-display" },
+                { id: "leak-decay", display: "leak-decay-display" },
+                { id: "wind-u", display: "wind-u-display" },
+                { id: "wind-v", display: "wind-v-display" },
+                { id: "wind-w", display: "wind-w-display" },
+                { id: "diffusivity", display: "diffusivity-display" },
+                { id: "decay", display: "decay-display" },
+                { id: "total-time", display: "total-time-display" },
+                { id: "frames", display: "frames-display" },
+            ];
+
+            sliders.forEach(({ id, display }) => {
+                const slider = document.getElementById(id);
+                const displayEl = document.getElementById(display);
+
+                slider.addEventListener("input", (e) => {
+                    displayEl.textContent = e.target.value;
+
+                    // Update frame interval calculation
+                    if (id === "total-time" || id === "frames") {
+                        updateFrameInterval();
+                    }
+                });
+            });
+
+            function updateFrameInterval() {
+                const totalTime = parseFloat(
+                    document.getElementById("total-time").value,
+                );
+                const frames = parseInt(
+                    document.getElementById("frames").value,
+                );
+                const interval = (totalTime / frames).toFixed(2);
+                document.getElementById("frame-interval-display").textContent =
+                    `${interval}s`;
+            }
+
+            updateFrameInterval();
+
+            // ========================================================================
+            // Leak Position Placement
+            // ========================================================================
+
+            let leakPlacementMode = false;
+
+            document
+                .getElementById("place-leak-btn")
+                .addEventListener("click", () => {
+                    leakPlacementMode = true;
+                    document.getElementById("status-text").textContent =
+                        "Click in scene to place leak source";
+                });
+
+            canvas.addEventListener("click", (e) => {
+                if (!leakPlacementMode) return;
+
+                // TODO: Implement 3D position picking
+                // For now, just use center position
+                const x = 128,
+                    y = 32,
+                    z = 128;
+
+                document.getElementById("leak-x").value = x;
+                document.getElementById("leak-y").value = y;
+                document.getElementById("leak-z").value = z;
+                document.getElementById("leak-x-display").textContent = x;
+                document.getElementById("leak-y-display").textContent = y;
+                document.getElementById("leak-z-display").textContent = z;
+
+                // Create/update leak marker
+                if (leakMarker) {
+                    scene.remove(leakMarker);
+                    sceneObjects = sceneObjects.filter(
+                        (obj) => obj !== leakMarker,
+                    );
+                }
+
+                const markerGeometry = new THREE.SphereGeometry(5, 16, 16);
+                const markerMaterial = new THREE.MeshStandardMaterial({
+                    color: 0xff0000,
+                    emissive: 0x330000,
+                    metalness: 0.3,
+                    roughness: 0.4,
+                });
+                leakMarker = new THREE.Mesh(markerGeometry, markerMaterial);
+                leakMarker.position.set(x, y, z);
+                leakMarker.userData.shapeType = "leak_source";
+                leakMarker.userData.isObstacle = false;
+                scene.add(leakMarker);
+                sceneObjects.push(leakMarker); // Add to scene objects so it can be selected!
+
+                leakPlacementMode = false;
+                document.getElementById("status-text").textContent =
+                    "Leak position set! Click to select and move it.";
+            });
+
+            // ========================================================================
+            // Reset to Defaults
+            // ========================================================================
+
+            document
+                .getElementById("reset-btn")
+                .addEventListener("click", () => {
+                    document.getElementById("leak-rate").value = 5.0;
+                    document.getElementById("leak-growth").value = 40;
+                    document.getElementById("leak-decay").value = 60;
+                    document.getElementById("wind-u").value = 2.0;
+                    document.getElementById("wind-v").value = 0.3;
+                    document.getElementById("wind-w").value = 0.0;
+                    document.getElementById("diffusivity").value = 0.5;
+                    document.getElementById("decay").value = 0.05;
+                    document.getElementById("total-time").value = 120;
+                    document.getElementById("frames").value = 60;
+
+                    // Trigger updates
+                    sliders.forEach(({ id }) => {
+                        document
+                            .getElementById(id)
+                            .dispatchEvent(new Event("input"));
+                    });
+
+                    console.log("🔄 Reset to defaults");
+                });
+
+            // ========================================================================
+            // Run Simulation Button
+            // ========================================================================
+
+            document
+                .getElementById("view-results-btn")
+                .addEventListener("click", () => {
+                    console.log("🎬 Opening 3D viewer in new tab...");
+                    // Open the working 3D point cloud viewer
+                    const newTab = window.open("/index_3d.html", "_blank");
+                    if (newTab) {
+                        console.log("✅ New tab opened successfully!");
+                        document.getElementById("status-text").textContent =
+                            "✅ Viewer opened in new tab! Switch to it to see results.";
+                    } else {
+                        console.log("❌ Popup blocked!");
+                        alert(
+                            "Popup blocked! Please allow popups for this site, then click VIEW RESULTS again.",
+                        );
+                    }
+                });
+
+            document
+                .getElementById("run-simulation-btn")
+                .addEventListener("click", async () => {
+                    console.log("🚀 Running simulation...");
+
+                    // Disable button during simulation
+                    const button =
+                        document.getElementById("run-simulation-btn");
+                    button.disabled = true;
+                    button.textContent = "⏳ RUNNING...";
+
+                    document.getElementById("status-text").textContent =
+                        "Generating Fortran code...";
+
+                    // Export scene configuration
+                    const sceneConfig = exportSceneConfig();
+                    console.log("Scene configuration:", sceneConfig);
+
+                    try {
+                        // Send to server
+                        document.getElementById("status-text").textContent =
+                            "Compiling CUDA Fortran...";
+
+                        const response = await fetch("/run_simulation", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify(sceneConfig),
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            console.log("✅ Simulation SUCCESS!", result);
+                            document.getElementById("status-text").textContent =
+                                `✅ Simulation complete in ${result.elapsed_time.toFixed(1)}s! Click VIEW RESULTS below.`;
+
+                            // Show the View Results button instead of auto-redirecting
+                            // Keep Run button visible for re-running with different parameters
+                            button.disabled = false;
+                            button.textContent = "▶️ RUN SIMULATION";
+                            document.getElementById(
+                                "view-results-btn",
+                            ).style.display = "block";
+                        } else {
+                            console.error("❌ Simulation FAILED:", result);
+                            alert(
+                                "Simulation failed!\n\n" +
+                                    result.error +
+                                    "\n\nCheck console for details.",
+                            );
+                            document.getElementById("status-text").textContent =
+                                "Simulation failed - check console";
+                            button.disabled = false;
+                            button.textContent = "▶️ RUN SIMULATION";
+                        }
+                    } catch (error) {
+                        console.error("❌ Error running simulation:", error);
+                        alert("Error running simulation:\n\n" + error.message);
+                        document.getElementById("status-text").textContent =
+                            "Error - check console";
+                        button.disabled = false;
+                        button.textContent = "▶️ RUN SIMULATION";
+                    }
+                });
+
+            function exportSceneConfig() {
+                return {
+                    domain: {
+                        nx: CONFIG.nx,
+                        ny: CONFIG.ny,
+                        nz: CONFIG.nz,
+                        dx: CONFIG.dx,
+                    },
+                    obstacles: sceneObjects.map((obj) => ({
+                        type: obj.userData.shapeType,
+                        position: obj.position.toArray(),
+                        rotation: obj.rotation.toArray(),
+                        scale: obj.scale.toArray(),
+                        isObstacle: obj.userData.isObstacle,
+                    })),
+                    leak: {
+                        position: [
+                            parseFloat(document.getElementById("leak-x").value),
+                            parseFloat(document.getElementById("leak-y").value),
+                            parseFloat(document.getElementById("leak-z").value),
+                        ],
+                        rate: parseFloat(
+                            document.getElementById("leak-rate").value,
+                        ),
+                        growth_time: parseFloat(
+                            document.getElementById("leak-growth").value,
+                        ),
+                        decay_start: parseFloat(
+                            document.getElementById("leak-decay").value,
+                        ),
+                    },
+                    wind: {
+                        u: parseFloat(document.getElementById("wind-u").value),
+                        v: parseFloat(document.getElementById("wind-v").value),
+                        w: parseFloat(document.getElementById("wind-w").value),
+                    },
+                    physics: {
+                        diffusivity: parseFloat(
+                            document.getElementById("diffusivity").value,
+                        ),
+                        decay: parseFloat(
+                            document.getElementById("decay").value,
+                        ),
+                    },
+                    simulation: {
+                        total_time: parseFloat(
+                            document.getElementById("total-time").value,
+                        ),
+                        frames: parseInt(
+                            document.getElementById("frames").value,
+                        ),
+                    },
+                };
+            }
+
+            // ========================================================================
+            // Save/Load Scene Functionality
+            // ========================================================================
+
+            // Save scene to JSON file (download)
+            document
+                .getElementById("save-scene-btn")
+                .addEventListener("click", () => {
+                    const sceneConfig = exportSceneConfig();
+                    const jsonString = JSON.stringify(sceneConfig, null, 2);
+                    const blob = new Blob([jsonString], {
+                        type: "application/json",
+                    });
+                    const url = URL.createObjectURL(blob);
+
+                    const timestamp = new Date()
+                        .toISOString()
+                        .replace(/[:.]/g, "-")
+                        .slice(0, 19);
+                    const filename = `scene_${timestamp}.json`;
+
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = filename;
+                    a.click();
+                    URL.revokeObjectURL(url);
+
+                    document.getElementById("status-text").textContent =
+                        `Scene saved as ${filename}`;
+                });
+
+            // Load scene from JSON file
+            document
+                .getElementById("load-scene-btn")
+                .addEventListener("click", () => {
+                    const input = document.createElement("input");
+                    input.type = "file";
+                    input.accept = ".json";
+
+                    input.onchange = (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            try {
+                                const sceneConfig = JSON.parse(
+                                    event.target.result,
+                                );
+                                loadSceneConfig(sceneConfig);
+                                document.getElementById(
+                                    "status-text",
+                                ).textContent =
+                                    `Loaded ${file.name} - run simulation to generate results`;
+                            } catch (err) {
+                                console.error("Failed to load scene:", err);
+                                document.getElementById(
+                                    "status-text",
+                                ).textContent = "Error loading scene file";
+                            }
+                        };
+                        reader.readAsText(file);
+                    };
+
+                    input.click();
+                });
+
+            // New scene - clear everything
+            document
+                .getElementById("new-scene-btn")
+                .addEventListener("click", () => {
+                    if (!confirm("Clear current scene and start fresh?"))
+                        return;
+
+                    // Remove all scene objects
+                    sceneObjects.forEach((obj) => {
+                        scene.remove(obj);
+                        if (obj.geometry) obj.geometry.dispose();
+                        if (obj.material) obj.material.dispose();
+                    });
+                    sceneObjects = [];
+
+                    // Reset leak marker
+                    if (leakMarker) {
+                        scene.remove(leakMarker);
+                        leakMarker = null;
+                    }
+
+                    // Reset UI to defaults
+                    document.getElementById("leak-x").value = 128;
+                    document.getElementById("leak-y").value = 32;
+                    document.getElementById("leak-z").value = 128;
+                    document.getElementById("leak-x-display").textContent = 128;
+                    document.getElementById("leak-y-display").textContent = 32;
+                    document.getElementById("leak-z-display").textContent = 128;
+                    document.getElementById("leak-rate").value = 5.0;
+                    document.getElementById("leak-growth").value = 40;
+                    document.getElementById("leak-decay").value = 60;
+
+                    document.getElementById("wind-u").value = 2.0;
+                    document.getElementById("wind-v").value = 0.3;
+                    document.getElementById("wind-w").value = 0.0;
+
+                    document.getElementById("diffusivity").value = 0.5;
+                    document.getElementById("decay").value = 0.05;
+
+                    document.getElementById("total-time").value = 120;
+                    document.getElementById("frames").value = 60;
+
+                    // Deselect
+                    if (transformControls.object) {
+                        transformControls.detach();
+                    }
+                    selectedObject = null;
+
+                    // Reset button states - show Run, hide View Results
+                    document.getElementById(
+                        "run-simulation-btn",
+                    ).style.display = "block";
+                    document.getElementById("run-simulation-btn").disabled =
+                        false;
+                    document.getElementById("run-simulation-btn").textContent =
+                        "▶️ RUN SIMULATION";
+                    document.getElementById("view-results-btn").style.display =
+                        "none";
+
+                    document.getElementById("status-text").textContent =
+                        "New scene created - run simulation to generate results";
+                });
+
+            // Load scene configuration into the builder
+            function loadSceneConfig(config) {
+                // Clear existing objects
+                sceneObjects.forEach((obj) => {
+                    scene.remove(obj);
+                    if (obj.geometry) obj.geometry.dispose();
+                    if (obj.material) obj.material.dispose();
+                });
+                sceneObjects = [];
+
+                if (leakMarker) {
+                    scene.remove(leakMarker);
+                    leakMarker = null;
+                }
+
+                // Load obstacles
+                if (config.obstacles) {
+                    config.obstacles.forEach((objData) => {
+                        let geometry;
+                        const material = new THREE.MeshStandardMaterial({
+                            color: objData.isObstacle ? 0x4488ff : 0x44ff88,
+                            transparent: true,
+                            opacity: 0.7,
+                            roughness: 0.4,
+                            metalness: 0.3,
+                        });
+
+                        if (objData.type === "box") {
+                            geometry = new THREE.BoxGeometry(30, 40, 20);
+                        } else if (objData.type === "cylinder") {
+                            geometry = new THREE.CylinderGeometry(
+                                15,
+                                15,
+                                60,
+                                32,
+                            );
+                        } else if (objData.type === "panel") {
+                            geometry = new THREE.BoxGeometry(50, 2, 50);
+                        } else {
+                            return; // Skip unknown types (like leak_source)
+                        }
+
+                        const mesh = new THREE.Mesh(geometry, material);
+                        mesh.position.fromArray(objData.position);
+                        if (objData.scale) mesh.scale.fromArray(objData.scale);
+                        if (objData.rotation) {
+                            mesh.rotation.x = objData.rotation[0];
+                            mesh.rotation.y = objData.rotation[1];
+                            mesh.rotation.z = objData.rotation[2];
+                        }
+                        mesh.userData.shapeType = objData.type;
+                        mesh.userData.isObstacle = objData.isObstacle !== false;
+
+                        scene.add(mesh);
+                        sceneObjects.push(mesh);
+                    });
+                }
+
+                // Load leak position
+                if (config.leak) {
+                    const pos = config.leak.position;
+                    document.getElementById("leak-x").value = pos[0];
+                    document.getElementById("leak-y").value = pos[1];
+                    document.getElementById("leak-z").value = pos[2];
+                    document.getElementById("leak-x-display").textContent =
+                        pos[0];
+                    document.getElementById("leak-y-display").textContent =
+                        pos[1];
+                    document.getElementById("leak-z-display").textContent =
+                        pos[2];
+
+                    if (config.leak.rate !== undefined)
+                        document.getElementById("leak-rate").value =
+                            config.leak.rate;
+                    if (config.leak.growth_time !== undefined)
+                        document.getElementById("leak-growth").value =
+                            config.leak.growth_time;
+                    if (config.leak.decay_start !== undefined)
+                        document.getElementById("leak-decay").value =
+                            config.leak.decay_start;
+
+                    // Create leak marker
+                    const markerGeometry = new THREE.SphereGeometry(5, 16, 16);
+                    const markerMaterial = new THREE.MeshStandardMaterial({
+                        color: 0xff0000,
+                        emissive: 0x330000,
+                        metalness: 0.3,
+                        roughness: 0.4,
+                    });
+                    leakMarker = new THREE.Mesh(markerGeometry, markerMaterial);
+                    leakMarker.position.set(pos[0], pos[1], pos[2]);
+                    leakMarker.userData.shapeType = "leak_source";
+                    leakMarker.userData.isObstacle = false;
+                    scene.add(leakMarker);
+                    sceneObjects.push(leakMarker);
+                }
+
+                // Load wind
+                if (config.wind) {
+                    if (config.wind.u !== undefined)
+                        document.getElementById("wind-u").value = config.wind.u;
+                    if (config.wind.v !== undefined)
+                        document.getElementById("wind-v").value = config.wind.v;
+                    if (config.wind.w !== undefined)
+                        document.getElementById("wind-w").value = config.wind.w;
+                }
+
+                // Load physics
+                if (config.physics) {
+                    if (config.physics.diffusivity !== undefined)
+                        document.getElementById("diffusivity").value =
+                            config.physics.diffusivity;
+                    if (config.physics.decay !== undefined)
+                        document.getElementById("decay").value =
+                            config.physics.decay;
+                }
+
+                // Load simulation params
+                if (config.simulation) {
+                    if (config.simulation.total_time !== undefined)
+                        document.getElementById("total-time").value =
+                            config.simulation.total_time;
+                    if (config.simulation.frames !== undefined)
+                        document.getElementById("frames").value =
+                            config.simulation.frames;
+                }
+
+                // Deselect
+                if (transformControls.object) {
+                    transformControls.detach();
+                }
+                selectedObject = null;
+
+                // Reset button states - show Run, hide View Results
+                document.getElementById("run-simulation-btn").style.display =
+                    "block";
+                document.getElementById("run-simulation-btn").disabled = false;
+                document.getElementById("run-simulation-btn").textContent =
+                    "▶️ RUN SIMULATION";
+                document.getElementById("view-results-btn").style.display =
+                    "none";
+            }
+
+            // ========================================================================
+            // Animation Loop
+            // ========================================================================
+
+            function animate() {
+                requestAnimationFrame(animate);
+                orbitControls.update();
+                renderer.render(scene, camera);
+            }
+
+            animate();
+
+            // Window resize
+            window.addEventListener("resize", () => {
+                camera.aspect = canvas.clientWidth / canvas.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            });
+
+            console.log("✅ Interactive Studio initialized!");
+            console.log("🎮 Switch to Build Mode to start designing");
+        </script>
+    </body>
+</html>

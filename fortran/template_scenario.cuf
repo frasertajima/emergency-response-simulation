@@ -1,0 +1,189 @@
+! Generated Scenario - Interactive Studio v44
+!
+! Auto-generated from browser-based scene builder
+! Timestamp: {{GENERATION_TIME}}
+!
+! Compile:
+!   nvfortran -cuda -gpu=cc80,cc86,cc89,cc90 -O3 -fast boundary_pinn_module_only.cuf template_scenario.cuf -o custom_scenario
+!
+! Run:
+!   ./custom_scenario
+
+program custom_scenario
+    use cudafor
+    use boundary_pinn_module
+    implicit none
+
+    ! Grid parameters (fixed at 128³ for performance)
+    integer, parameter :: nx = 128, ny = 128, nz = 128
+    real(4), parameter :: domain_size = 256.0
+    real(4), parameter :: dx = domain_size / real(nx)
+
+    ! Physics parameters (from UI sliders)
+    real(4), parameter :: D = {{DIFFUSIVITY}}      ! Diffusivity (m^2/s)
+    real(4), parameter :: decay = {{DECAY_RATE}}   ! Decay rate (1/s)
+    real(4), parameter :: dt = 0.05                ! Timestep (reduced for stability)
+
+    ! Simulation parameters (from UI)
+    real(4), parameter :: total_time = {{TOTAL_TIME}}
+    integer, parameter :: n_steps = int(total_time / dt)
+    integer, parameter :: save_interval = {{SAVE_INTERVAL}}  ! Calculated from frames
+
+    ! Wind field (from UI sliders)
+    real(4), parameter :: u_wind = {{WIND_U}}
+    real(4), parameter :: v_wind = {{WIND_V}}
+    real(4), parameter :: w_wind = {{WIND_W}}
+
+    ! Leak parameters (from UI)
+    integer, parameter :: leak_x = {{LEAK_X}}, leak_y = {{LEAK_Y}}, leak_z = {{LEAK_Z}}
+    real(4), parameter :: leak_sigma = 3.0
+    real(4), parameter :: leak_rate = {{LEAK_RATE}}
+    real(4), parameter :: growth_time = {{LEAK_GROWTH}}
+    real(4), parameter :: decay_start = {{LEAK_DECAY}}
+
+    ! Host arrays
+    real(4), dimension(nx, ny, nz) :: C, u, v, w
+    integer(1), dimension(nx, ny, nz) :: obstacle
+
+    ! Device arrays
+    real(4), device, dimension(nx, ny, nz) :: C_d, u_d, v_d, w_d
+    integer(1), device, dimension(nx, ny, nz) :: obstacle_d
+
+    ! Timing
+    real(8) :: start_time, end_time, elapsed
+
+    ! Loop variables
+    integer :: i, j, k, step
+    real(4) :: r, x, y, z, leak_strength, time_sec, growth_factor
+    character(len=256) :: filename
+
+    print *, "================================================================================"
+    print *, "Custom Scenario - Interactive Studio v44"
+    print *, "Auto-generated scenario"
+    print *, "================================================================================"
+    print *, ""
+    print *, "Domain: 256³ grid (", nx * ny * nz, " cells)"
+    print *, "Simulation time:", total_time, "seconds"
+    print *, "Output frames:", int(n_steps / save_interval)
+    print *, ""
+
+    ! Initialize obstacle array
+    print *, "Creating scenario obstacles..."
+    obstacle = 0
+
+{{OBSTACLE_INITIALIZATION}}
+
+    print *, "Obstacles created!"
+    print *, "  Total obstacle cells:", count(obstacle > 0), &
+             "(", 100.0 * count(obstacle > 0) / real(nx*ny*nz), "%)"
+    print *, ""
+
+    ! Initialize concentration field
+    C = 0.0
+
+    ! Initialize wind field (uniform)
+    u = u_wind
+    v = v_wind
+    w = w_wind
+
+    ! Copy to device
+    C_d = C
+    u_d = u
+    v_d = v
+    w_d = w
+    obstacle_d = obstacle
+
+    ! Set boundary conditions (WALL boundaries on all sides)
+    call set_boundary_conditions(BC_WALL, BC_WALL, BC_WALL, BC_WALL, BC_WALL, BC_WALL)
+
+    ! Create output directory
+    call system('mkdir -p {{OUTPUT_DIR}}')
+
+    ! Save obstacle mask
+    open(unit=20, file='{{OUTPUT_DIR}}/obstacle_mask.bin', &
+         form='unformatted', access='stream')
+    write(20) obstacle
+    close(20)
+
+    print *, "Leak source at grid:", leak_x, leak_y, leak_z
+    print *, "Leak source at world:", leak_x * dx, leak_y * dx, leak_z * dx
+    print *, ""
+    print *, "Starting simulation..."
+    print *, ""
+
+    ! Start timing
+    call cpu_time(start_time)
+
+    ! Main time-stepping loop
+    do step = 0, n_steps - 1
+        time_sec = step * dt
+
+        ! Add leak source with growth/decay profile
+        if (time_sec < growth_time) then
+            ! Growing phase
+            growth_factor = (time_sec / growth_time) * leak_rate
+        else if (time_sec < decay_start) then
+            ! Peak phase
+            growth_factor = leak_rate
+        else
+            ! Decay phase
+            growth_factor = leak_rate * exp(-decay * (time_sec - decay_start))
+        end if
+
+        ! Add leak source (only if growth_factor > 0)
+        if (growth_factor > 0.0) then
+            C = C_d  ! Copy to host
+            do k = max(1, leak_z - 3), min(nz, leak_z + 3)
+                do j = max(1, leak_y - 3), min(ny, leak_y + 3)
+                    do i = max(1, leak_x - 3), min(nx, leak_x + 3)
+                        r = sqrt(real((i - leak_x)**2 + (j - leak_y)**2 + (k - leak_z)**2))
+                        if (r < 3.0) then
+                            ! Add source with saturation limit to prevent exponential blowup
+                            C(i, j, k) = min(C(i, j, k) + growth_factor * exp(-(r / leak_sigma)**2) * dt, 1000.0)
+                        end if
+                    end do
+                end do
+            end do
+            C_d = C  ! Copy back to device
+        end if
+
+        ! Advection-diffusion step on GPU
+        call timestep_bounded(u_d, v_d, w_d, C_d, obstacle_d, &
+                             nx, ny, nz, dx, D, decay, dt)
+
+        ! Save output at intervals
+        if (mod(step, save_interval) == 0) then
+            C = C_d
+            write(filename, '(A,I4.4,A)') '{{OUTPUT_DIR}}/concentration_', step, '.bin'
+            open(unit=10, file=trim(filename), form='unformatted', access='stream')
+            write(10) C
+            close(10)
+
+            if (mod(step, save_interval * 10) == 0) then
+                print *, "Step", step, "/", n_steps, " (", time_sec, "s) - Max concentration:", maxval(C)
+            end if
+        end if
+    end do
+
+    ! End timing
+    call cpu_time(end_time)
+    elapsed = end_time - start_time
+
+    ! Final output
+    C = C_d
+    write(filename, '(A,I4.4,A)') '{{OUTPUT_DIR}}/concentration_', n_steps, '.bin'
+    open(unit=10, file=trim(filename), form='unformatted', access='stream')
+    write(10) C
+    close(10)
+
+    print *, ""
+    print *, "================================================================================"
+    print *, "Simulation Complete!"
+    print *, "================================================================================"
+    print *, "Total time:", elapsed, "seconds"
+    print *, "Performance:", real(n_steps) / elapsed, "steps/second"
+    print *, "Output directory: {{OUTPUT_DIR}}/"
+    print *, "Total frames:", int(n_steps / save_interval) + 1
+    print *, ""
+
+end program custom_scenario
