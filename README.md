@@ -162,6 +162,41 @@ These help verify that simulations are running correctly and data is being loade
 - **Scene files download location**: When saving scenes, files are saved to your browser's default download directory. This is a browser security restriction.
 
 - **Limited leakage**: This first version is only 120 seconds at most.
+- Current Limitations:
+
+### 1. Grid Resolution Bottleneck
+- **2m cells can't resolve small gaps** - A 1m gap doesn't exist in the simulation
+- Sub-grid features are completely invisible to the solver
+- This explains why gas doesn't seep through narrow openings
+
+### 2. Staircase Boundaries
+- Obstacles are voxelized to the grid
+- Curved surfaces become blocky stairs
+- Flow around cylinders is poorly represented
+
+### 3. No Turbulence Modeling
+- Laminar flow only (no eddies, no mixing enhancement)
+- Unrealistic for real emergency scenarios with complex terrain
+
+### 4. Uniform Wind Field
+- Constant wind everywhere
+- No building wake effects, no channeling computed dynamically
+
+## Where CNN/PINN Could Help
+
+### Option 1: Sub-Grid CNN for Gap Flow
+Train a CNN to predict **effective permeability** through sub-grid features.
+
+### Option 2: Super-Resolution Post-Processing
+Train a CNN to upscale results.
+
+### Option 3: Learned Turbulence Closure
+Replace the simple diffusion coefficient D with a CNN-predicted field.
+
+### Option 4: Full PINN Approach
+Train a neural network to satisfy the PDE directly. PINNs struggle with advection-dominated problems and sharp gradients. Our initial efforts failed.
+
+In short, this first version is only a baseline for an eventual PINN, not the PINN we were hoping for. That work remains to be solved.
 
 ## Troubleshooting
 
