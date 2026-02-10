@@ -2,6 +2,8 @@
 
 An interactive 3D scenario builder and GPU-accelerated pollutant dispersion simulator for emergency response planning and training.
 
+https://youtu.be/Dy1IKznezwY
+
 ## Overview
 
 This tool allows users to:
