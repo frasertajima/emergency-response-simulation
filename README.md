@@ -159,6 +159,8 @@ These help verify that simulations are running correctly and data is being loade
 
 - **Scene files download location**: When saving scenes, files are saved to your browser's default download directory. This is a browser security restriction.
 
+- **Limited leakage**: This first version is only 120 seconds at most.
+
 ## Troubleshooting
 
 ### "nvfortran not found"
